@@ -1,14 +1,10 @@
 import re
 from datasets import load_dataset
 import pandas as pd
+import jsonlines
 
-
-def transform_question(question):
-    pattern = (
-        r"TITLE: (.+) QUESTION \[(\d+) upvotes\]: (.+) REPLY \[(\d+) votes\]: (.+)"
-    )
-
-    match = re.match(pattern, question)
+def transform(entry, pattern):
+    match = re.match(pattern, entry)
 
     if match:
         title = match.group(1)
@@ -21,24 +17,17 @@ def transform_question(question):
     else:
         return "Input format not recognized."
 
+def transform_question(question):
+    pattern = (
+        r"TITLE: (.+) QUESTION \[(\d+) upvotes\]: (.+) REPLY \[(\d+) votes\]: (.+)"
+    )
+    return transform(question, pattern)
 
 def transform_paper(paper):
     pattern = r"\\begin{document} \\title\{(.+?)\} (.+?)\\bibliographystyle(.+)"
+    return transform(paper, pattern)
 
-    match = re.match(pattern, paper)
-
-    if match:
-        title = match.group(1)
-        content = match.group(2)
-
-        output_string = f"Conversation between a Human and a proofer assistant  [INS] {title} [/INS] {content}"
-
-        return output_string
-    else:
-        return "Input format not recognized."
-
-
-def transform_sample(sample):
+def map_sample(sample):
     try:
         text = sample.get("text")
         meta = sample.get("meta")
@@ -59,44 +48,44 @@ def transform_sample(sample):
         print("transform_sample error " + e)
         return sample
 
+def save_dataset_as_jsonl(dataset, filename):
+    with jsonlines.open(filename + ".jsonl", mode="w") as writer:
+        for _, row in pd.DataFrame(dataset).iterrows():
+            transformed_row = map_sample(row.to_dict())
+            writer.write(transformed_row)
 
 def main():
 
-    #     x = """TITLE: Evaluating the limit $\lim_{n\to+\infty}(\sqrt[n]{n}-1)^n$ QUESTION [6 upvotes]: Evaluate the limit $$\lim_{n\to+\infty}(\sqrt[n]{n}-1)^n$$ I know the limit is 0 by looking at the graph of the function, but how can I algebraically show that that is the limit? REPLY [1 votes]: Since, $\frac{\log(x)}x\le\frac1e$, we have that $$ \begin{align} \sqrt[n]{n}-1 &\le e^{1/e}-1\\ &\lt1 \end{align} $$ Therefore, $$ \begin{align} \lim_{n\to\infty}\left(\sqrt[n]{n}-1\right)^n &\le\lim_{n\to\infty}\left(e^{1/e}-1\right)^n\\[3pt] &=0 \end{align} $$
-    # """
-    #     y = transform_sample({"text": str(x), "meta": {"question_id": 123}})
-    #     print(y)
-
+    # Training
     dataset = load_dataset(
         "hoskinson-center/proof-pile",
         # streaming=True,
         split="train",
         trust_remote_code=True,
     )
+    save_dataset_as_jsonl(dataset, 'dataset-train')
 
-    df = pd.DataFrame(dataset)
-    df.to_csv("dataset-train.csv", index=False)
 
+
+    # Testing
     dataset = load_dataset(
         "hoskinson-center/proof-pile",
         # streaming=True,
         split="test",
-        trust_remote_code=True,
+        trust_remote_code=True
     )
+    save_dataset_as_jsonl(dataset, 'dataset-test')
 
-    df = pd.DataFrame(dataset)
-    df.to_csv("dataset-test.csv", index=False)
 
+
+    # Validation
     dataset = load_dataset(
         "hoskinson-center/proof-pile",
         # streaming=True,
         split="validation",
-        trust_remote_code=True,
+        trust_remote_code=True
     )
-
-    df = pd.DataFrame(dataset)
-    df.to_csv("dataset-validation.csv", index=False)
-
+    save_dataset_as_jsonl(dataset, 'dataset-validation')
 
 if __name__ == "__main__":
     main()
