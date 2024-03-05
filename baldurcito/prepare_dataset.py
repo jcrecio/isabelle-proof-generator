@@ -1,3 +1,4 @@
+import json
 import re
 from datasets import load_dataset
 import pandas as pd
@@ -51,22 +52,18 @@ def map_sample(sample):
 def save_dataset_as_jsonl(dataset, filename):
     with jsonlines.open(filename + ".jsonl", mode="w") as writer:
         for _, row in pd.DataFrame(dataset).iterrows():
-            transformed_row = map_sample(row.to_dict())
-            writer.write(transformed_row)
+            sample = row.to_dict()
+            meta_raw = sample.get('meta')
+            meta = json.loads(meta_raw)
+            if 'file' not in meta: continue
+
+            file = str(meta.get('file'))
+
+            if 'afp' in file:
+                # transformed_row = map_sample(sample)
+                writer.write(sample)
 
 def main():
-
-    # Training
-    dataset = load_dataset(
-        "hoskinson-center/proof-pile",
-        # streaming=True,
-        split="train",
-        trust_remote_code=True,
-    )
-    save_dataset_as_jsonl(dataset, 'dataset-train')
-
-
-
     # Testing
     dataset = load_dataset(
         "hoskinson-center/proof-pile",
@@ -74,9 +71,7 @@ def main():
         split="test",
         trust_remote_code=True
     )
-    save_dataset_as_jsonl(dataset, 'dataset-test')
-
-
+    save_dataset_as_jsonl(dataset, 'afp-dataset-test')
 
     # Validation
     dataset = load_dataset(
@@ -85,7 +80,16 @@ def main():
         split="validation",
         trust_remote_code=True
     )
-    save_dataset_as_jsonl(dataset, 'dataset-validation')
+    save_dataset_as_jsonl(dataset, 'afp-dataset-validation')
+
+    # Training
+    dataset = load_dataset(
+        "hoskinson-center/proof-pile",
+        # streaming=True,
+        split="train",
+        trust_remote_code=True,
+    )
+    save_dataset_as_jsonl(dataset, 'afp-dataset-train')
 
 if __name__ == "__main__":
     main()
