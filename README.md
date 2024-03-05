@@ -1,4 +1,4 @@
-# Instructions to setup 'Baldurcito'
+# Instructions to setup isabelle-proof-generator
 
 1. Install poetry in the computer
 2. Create a virtual environment:
