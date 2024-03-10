@@ -7,14 +7,15 @@ def isabelle2mistral(isabelle_text: str):
 
     matches = re.findall(pattern, isabelle_text, re.DOTALL)
 
-    parts = ["[INST]Proof the following Isabelle/HOL statements: ",]
+    parts = []
     for match in matches:
         parts.append(match.strip())
-    parts.append("[/INST]")
+
+    question = ''.join(parts)
 
     index = isabelle_text.find("begin") + len("begin")
     formal_part = isabelle_text[index:]
 
-    parts.append(formal_part.strip())
+    answer = ''.join(formal_part.strip())
 
-    return ''.join(parts)
+    return [question, answer]

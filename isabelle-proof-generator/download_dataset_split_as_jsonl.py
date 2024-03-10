@@ -49,26 +49,47 @@ import jsonlines
 #         print("transform_sample error " + e)
 #         return sample
 
-def save_dataset_as_jsonl(dataset, filename):
-    with jsonlines.open(filename + ".jsonl", mode="w") as writer:
-        for _, row in pd.DataFrame(dataset).iterrows():
-            sample = row.to_dict()
-            meta_raw = sample.get('meta')
-            meta = json.loads(meta_raw)
-            if 'file' not in meta: continue
+# def save_dataset_as_jsonl(dataset, filename):
+#     with jsonlines.open(filename + ".jsonl", mode="w") as writer:
+#         for _, row in pd.DataFrame(dataset).iterrows():
+#             sample = row.to_dict()
+#             meta_raw = sample.get('meta')
+#             meta = json.loads(meta_raw)
+#             if 'file' not in meta: continue
 
-            file = str(meta.get('file'))
+#             file = str(meta.get('file'))
 
-            if 'afp' in file:
-                # transformed_row = map_sample(sample)
-                writer.write(sample)
+#             if 'afp' in file:
+#                 # transformed_row = map_sample(sample)
+#                 writer.write(sample)
 
 def main():
+    # Testing
     dataset = load_dataset(
         "hoskinson-center/proof-pile",
+        # streaming=True,
+        split="test",
         trust_remote_code=True
     )
-    save_dataset_as_jsonl(dataset, 'afp-dataset')
+    save_dataset_as_jsonl(dataset, 'afp-dataset-test')
+
+    # Validation
+    dataset = load_dataset(
+        "hoskinson-center/proof-pile",
+        # streaming=True,
+        split="validation",
+        trust_remote_code=True
+    )
+    save_dataset_as_jsonl(dataset, 'afp-dataset-validation')
+
+    # Training
+    dataset = load_dataset(
+        "hoskinson-center/proof-pile",
+        # streaming=True,
+        split="train",
+        trust_remote_code=True,
+    )
+    save_dataset_as_jsonl(dataset, 'afp-dataset-train')
 
 if __name__ == "__main__":
     main()
