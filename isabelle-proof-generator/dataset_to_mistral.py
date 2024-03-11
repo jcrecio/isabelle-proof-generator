@@ -10,7 +10,7 @@ def convert_dataset_to_mistral(input_filepath: str, output_filepath):
                 input_line = json.loads(line)
                 text = input_line.get('text')
                 [question, answer] = isabelle2mistral(text)
-                output_line = { "question": question, "answer": answer}
+                output_line = { "prompt": f"A Isabelle/HOL proof assistant generates an Isabelle/HOL proof from a description.[INST]{question}[/INST]{answer}"}
                 output.write(output_line)
 
     return result
