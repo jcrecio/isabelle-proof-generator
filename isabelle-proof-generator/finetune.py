@@ -21,9 +21,9 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_use_double_quant= False,
 )
 
-model = AutoModelForCausalLM.from_pretrained(
+model = AutoModelForCausalLM.from_pretrained( # ------> Torch not compiled with CUDA enabled
     base_model,
-    quantization_config=bnb_config,
+    # quantization_config=bnb_config, ------------> error importing library Accelerate: sin GPU?
     device_map={"": 0}
 )
 

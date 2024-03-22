@@ -22,3 +22,17 @@
     poetry run python .\baldurcito\prepare_dataset.py   
     ```
 
+# Run Mistral locally
+CLI
+Instruct:
+```
+ollama run mistral
+```
+API
+Example:
+```
+curl -X POST http://localhost:11434/api/generate -d '{
+  "model": "mistral",
+  "prompt":"Here is a story about llamas eating grass"
+ }'
+```
