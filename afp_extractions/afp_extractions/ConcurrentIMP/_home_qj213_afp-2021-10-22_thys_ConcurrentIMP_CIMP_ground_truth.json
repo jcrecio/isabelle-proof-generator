@@ -1,0 +1,1 @@
+{"file_name": "/home/qj213/afp-2021-10-22/thys/ConcurrentIMP/CIMP.thy", "working_directory": "/home/qj213/afp-2021-10-22/thys/ConcurrentIMP", "problem_names": ["lemmas cleanup_simps =\n  atomize_eq\n  simp_thms"], "translations": [["", "lemmas cleanup_simps =\n  atomize_eq\n  simp_thms"], ["", "ML_file\\<open>cimp.ML\\<close>"], ["", "(*<*)"], ["", "end"], ["", "(*>*)"]]}

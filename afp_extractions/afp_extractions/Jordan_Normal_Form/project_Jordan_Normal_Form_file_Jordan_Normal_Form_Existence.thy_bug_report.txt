@@ -1,0 +1,1 @@
+Function isa_step (args=(<server_pb2_grpc.ServerStub object at 0x7fd928af96d0>, '/home/qj213/afp-2021-10-22/thys/Jordan_Normal_Form/Jordan_Normal_Form_Existence.thy')) (kwargs={}) timed out after 120.000000 seconds.

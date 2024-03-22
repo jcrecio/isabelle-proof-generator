@@ -1,0 +1,1 @@
+{"file_name": "/home/qj213/afp-2021-10-22/thys/Word_Lib/More_Misc.thy", "working_directory": "/home/qj213/afp-2021-10-22/thys/Word_Lib", "problem_names": ["lemmas ls_splits = prod.split prod.split_asm if_split_asm"], "translations": [["", "lemmas ls_splits = prod.split prod.split_asm if_split_asm"], ["", "end"]]}

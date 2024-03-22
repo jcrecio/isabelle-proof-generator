@@ -1,0 +1,1 @@
+{"file_name": "/home/qj213/afp-2021-10-22/thys/UTP/utp/utp_state_parser.thy", "working_directory": "/home/qj213/afp-2021-10-22/thys/UTP", "problem_names": ["lemma \"LOCAL p \\<bullet> II = II\""], "translations": [["", "lemma \"LOCAL p \\<bullet> II = II\""], ["proof (prove)\ngoal (1 subgoal):\n 1. LOCAL p \\<bullet> II = II", "by (rel_auto)"], ["", "end"]]}

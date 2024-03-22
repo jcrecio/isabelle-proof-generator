@@ -1,0 +1,1 @@
+Function isa_step (args=(<server_pb2_grpc.ServerStub object at 0x7fc3053206d0>, '/home/qj213/afp-2021-10-22/thys/Show/Old_Datatype/Old_Show_Examples.thy')) (kwargs={}) timed out after 120.000000 seconds.

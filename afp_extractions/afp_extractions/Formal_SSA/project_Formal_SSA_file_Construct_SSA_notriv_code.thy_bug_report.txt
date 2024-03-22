@@ -1,0 +1,1 @@
+Function isa_step (args=(<server_pb2_grpc.ServerStub object at 0x7f23db5266d0>, '/home/qj213/afp-2021-10-22/thys/Formal_SSA/Construct_SSA_notriv_code.thy')) (kwargs={}) timed out after 120.000000 seconds.

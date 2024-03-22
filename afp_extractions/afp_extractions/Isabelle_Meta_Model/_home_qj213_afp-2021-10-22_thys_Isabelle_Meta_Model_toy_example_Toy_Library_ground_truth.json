@@ -1,0 +1,1 @@
+{"file_name": "/home/qj213/afp-2021-10-22/thys/Isabelle_Meta_Model/toy_example/Toy_Library.thy", "working_directory": "/home/qj213/afp-2021-10-22/thys/Isabelle_Meta_Model", "problem_names": ["lemmas [simp,code_unfold] = state.defs"], "translations": [["", "lemmas [simp,code_unfold] = state.defs"], ["", "end"]]}

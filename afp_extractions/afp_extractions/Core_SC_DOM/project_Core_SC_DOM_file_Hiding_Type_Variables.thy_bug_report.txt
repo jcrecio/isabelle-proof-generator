@@ -1,0 +1,5 @@
+<_InactiveRpcError of RPC that terminated with:
+	status = StatusCode.INTERNAL
+	details = ""
+	debug_error_string = "{"created":"@1635998031.256775142","description":"Error received from peer ipv6:[::1]:8000","file":"src/core/lib/surface/call.cc","file_line":1066,"grpc_message":"","grpc_status":13}"
+>
