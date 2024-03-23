@@ -1,38 +1,19 @@
-# Instructions to setup isabelle-proof-generator
+# Isabelle-proof-generator
 
-1. Install poetry in the computer
-2. Create a virtual environment:
-    ```{shell}
-    poetry shell  
-    ```
-3. Install the dependencies:
-    ```{shell}
-    poetry install  
-    ```
-3. Raw Math dataset: proof-pile
+## Create the dataset
 
-    https://huggingface.co/datasets/hoskinson-center/proof-pile
+### JSON Dataset
+In order to generate a dataset to finetune a model to infer Isabelle/HOL proofs we need to start with the PISA Dataset from https://github.com/albertqjiang/Portal-to-ISAbelle
 
-4. Get the raw dataset and map it to our format for Mistral:
-    ```{shell}
-    <INTRODUCTION>[INS]<QUESTION>[/INS]<ANSWER>
-    ```
-    Run the command:
-    ```{shell}
-    poetry run python .\baldurcito\prepare_dataset.py   
-    ```
+This dataset contains the AFP problems separated in folders.
 
-# Run Mistral locally
-CLI
-Instruct:
+Set the following environment variables:
 ```
-ollama run mistral
+PROBLEMS_FOLDER=<root folder for the problems>
+OUTPUT_FILE_DATASET=<output dataset file .json>
 ```
-API
-Example:
-```
-curl -X POST http://localhost:11434/api/generate -d '{
-  "model": "mistral",
-  "prompt":"Here is a story about llamas eating grass"
- }'
-```
+
+Run the script `isabelle_proofs_dataset_creator` to generate the dataset as a json file.
+
+Run the `script proofs_to_jsonl.py <dataset json file>` to get the file in jsonl format.
+
