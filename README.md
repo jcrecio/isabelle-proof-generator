@@ -15,5 +15,8 @@ OUTPUT_FILE_DATASET=<output dataset file .json>
 
 Run the script `isabelle_proofs_dataset_creator` to generate the dataset as a json file.
 
-Run the `script proofs_to_jsonl.py <dataset json file>` to get the file in jsonl format.
+Run the script `proofs_to_jsonl.py <dataset json file>` to get the file in jsonl format.
+
+Run the script `proofs_to_mistral.py <dataset jsonl file>` to get the file in the format Mistal expects for finetuning.
+
 
