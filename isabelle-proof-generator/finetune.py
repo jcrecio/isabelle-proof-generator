@@ -1,19 +1,21 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,HfArgumentParser,TrainingArguments,pipeline, logging, TextStreamer
+
 from peft import LoraConfig, PeftModel, prepare_model_for_kbit_training, get_peft_model
 import os, torch, wandb, platform, warnings
 from datasets import load_dataset
 from trl import SFTTrainer
+
+
 from huggingface_hub import notebook_login
 
 from dotenv import load_dotenv
 load_dotenv()
 
 base_model = "mistralai/Mistral-7B-v0.1" #bn22/Mistral-7B-Instruct-v0.1-sharded
-dataset_name, new_model = "jcrecio/afp", "jcrecio/afp_7B"
+dataset_name, new_model = "jcrecio/afp_mistral", "jcrecio/afp_7B"
 
 dataset = load_dataset(dataset_name, split="train")
 
-# Load base model(Mistral 7B)
 bnb_config = BitsAndBytesConfig(
     load_in_4bit= True,
     bnb_4bit_quant_type= "nf4",
@@ -21,10 +23,10 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_use_double_quant= False,
 )
 
-model = AutoModelForCausalLM.from_pretrained( # ------> Torch not compiled with CUDA enabled
-    base_model,
-    # quantization_config=bnb_config, ------------> error importing library Accelerate: sin GPU?
-    device_map={"": 0}
+model = AutoModelForCausalLM.from_pretrained(
+    base_model
+    # quantization_config=bnb_config,
+    #device_map={"": 0}
 )
 
 
@@ -58,9 +60,6 @@ peft_config = LoraConfig(
     )
 model = get_peft_model(model, peft_config)
 
-
-# Training Arguments
-# Hyperparameters should beadjusted based on the hardware you using
 training_arguments = TrainingArguments(
     output_dir= "./results",
     num_train_epochs= 1,
@@ -82,13 +81,12 @@ training_arguments = TrainingArguments(
 )
 
 
-# Setting sft parameters
 trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
     peft_config=peft_config,
     max_seq_length= None,
-    dataset_text_field="prompt",
+    dataset_text_field="proof",
     tokenizer=tokenizer,
     args=training_arguments,
     packing= False,
@@ -97,7 +95,6 @@ trainer = SFTTrainer(
 
 trainer.train()
 
-# Save the fine-tuned model
 trainer.model.save_pretrained(new_model)
 wandb.finish()
 model.config.use_cache = True
