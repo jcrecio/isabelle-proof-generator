@@ -1,6 +1,11 @@
 import json
 import sys
 
+PROMPT_TEMPLATE = 'An user requests an Isabelle/HOL proof completion to an AI Assistant proof generator for a current problem, lemma or theorem.[INST]Infer a proof for the following Isabelle/HOL lemma/s: {lemma}[/INST]{proof}'
+
+def map_prompt(lemma, proof):
+    return PROMPT_TEMPLATE.replace('{lemma}', lemma).replace('{proof}', proof)
+
 def jsonl_to_json(input_file, output_file):
     with open(input_file, 'r') as infile:
         with open(output_file, 'w') as outfile:
@@ -9,7 +14,7 @@ def jsonl_to_json(input_file, output_file):
                 problem = json_data.get('proof')
                 lemma = problem.get('lemma')
                 proof = problem.get('proof')
-                json.dump({'proof': f'An user requests an Isabelle/HOL proof completion to an AI Assistant proof generator for a current problem, lemma or theorem.[INST]{lemma}[/INST]{proof}'}, outfile)
+                json.dump({'proof': map_prompt(lemma, proof)}, outfile)
                 outfile.write('\n')
 
 
