@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 base_model = "mistralai/Mistral-7B-v0.1" #bn22/Mistral-7B-Instruct-v0.1-sharded
-dataset_name, new_model = "jcrecio/afp_mistral", "jcrecio/afp_7B"
+dataset_name, new_model = "subset_afp_mistral", "jcrecio/suboptimal_afp_7B"
 
 dataset = load_dataset(dataset_name, split="train")
 
@@ -24,9 +24,9 @@ bnb_config = BitsAndBytesConfig(
 )
 
 model = AutoModelForCausalLM.from_pretrained(
-    base_model,
-    quantization_config=bnb_config,
-    device_map={"": 0}
+    base_model
+    # quantization_config=bnb_config,
+    # device_map={"": 0}
 )
 
 
