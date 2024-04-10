@@ -16,12 +16,12 @@ dataset_name, new_model = "jcrecio/subset_afp_mistral", "jcrecio/suboptimal_afp_
 
 dataset = load_dataset(dataset_name, split="train")
 
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit= True,
-    bnb_4bit_quant_type= "nf4",
-    bnb_4bit_compute_dtype= torch.bfloat16,
-    bnb_4bit_use_double_quant= False,
-)
+# bnb_config = BitsAndBytesConfig(
+#     load_in_4bit= True,
+#     bnb_4bit_quant_type= "nf4",
+#     bnb_4bit_compute_dtype= torch.bfloat16,
+#     bnb_4bit_use_double_quant= False,
+# )
 
 model = AutoModelForCausalLM.from_pretrained(
     base_model
