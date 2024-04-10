@@ -90,6 +90,7 @@ trainer = SFTTrainer(
     tokenizer=tokenizer,
     args=training_arguments,
     packing= False,
+    device='cpu'
 )
 
 
