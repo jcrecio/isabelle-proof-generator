@@ -80,7 +80,16 @@ training_arguments = TrainingArguments(
     report_to="wandb"
 )
 
+##################### ONLY FOR CPU
+# Move model to CPU
+model.to(torch.device('cpu'))
 
+# Move dataset to CPU
+dataset_to_cpu = dataset.map(lambda example: {'input_ids': example['input_ids'].to(torch.device('cpu')),
+                                               'attention_mask': example['attention_mask'].to(torch.device('cpu')),
+                                               'labels': example['labels'].to(torch.device('cpu'))})
+
+#######################
 trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
