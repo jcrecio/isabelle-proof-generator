@@ -1,0 +1,22 @@
+name: myenv
+channels:
+  - defaults
+dependencies:
+  - python=3.8  # Specify the Python version
+  - numpy       # Example package, you can add more packages here
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - pip
+  - pip:
+    - bitsandbytes
+    - git+https://github.com/huggingface/transformers.git
+    - git+https://github.com/huggingface/peft.git
+    - git+https://github.com/huggingface/accelerate.git
+    - trl
+    - xformers
+    - wandb
+    - datasets
+    - einops
+    - sentencepiece
