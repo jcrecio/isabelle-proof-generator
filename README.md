@@ -9,17 +9,22 @@ This dataset contains the AFP problems separated in folders.
 
 Set the following environment variables:
 ```
-PROBLEMS_FOLDER=<root folder for the problems>
-OUTPUT_FILE_DATASET=<output dataset file .json>
+PROBLEMS_FOLDER=<root folder for the PISA extractions AFP problems to create the dataset>
+OUTPUT_FILE_DATASET=<output dataset filepath .json for the json dataset>
 USE_MODELS_OFFLINE=<true/false>
 USE_WANDB=<true/false>
 ```
 
-Run the script `isabelle_proofs_dataset_creator` to generate the dataset as a json file.
+1. Run the script `json_dataset_creator.py` to generate the dataset as a json file containing pairs (theorem statement, proof)
 
-Run the script `proofs_to_jsonl.py <dataset json file>` to get the file in jsonl format.
+2. Run the script `proofs_to_jsonl.py <dataset json file>` to get the file in jsonl format.
 
-Run the script `proofs_to_mistral.py <dataset jsonl file>` to get the file in the format Mistal expects for finetuning.
+3. Run the script `proofs_to_mistral.py <dataset jsonl file>` to get the file in the format Mistal expects for finetuning. (Includes the finetune specialized prompt)
+
+The specialized prompt for finetune is:
+```
+You are now an specialized agent to infer proofs for theorem statements or lemmas written in Isabelle/HOL. You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding theorem statement or lemma.[INST]Infer a proof for the following Isabelle/HOL theorem statement/s: {theorem_statement}[/INST]{proof}
+```
 
 The generated dataset is published in the following link in Huggingface: https://huggingface.co/datasets/jcrecio/afp_mistral
 
