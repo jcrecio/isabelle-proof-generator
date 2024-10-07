@@ -67,6 +67,7 @@ pip install -q -U git+https://github.com/huggingface/transformers.git
 pip install -q -U git+https://github.com/huggingface/peft.git
 pip install -q -U git+https://github.com/huggingface/accelerate.git
 pip install -q trl xformers wandb datasets einops sentencepiece
+pip install python-dotenv
 ```
 
 Run the command for finetune
