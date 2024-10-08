@@ -7,8 +7,8 @@ from trl import SFTTrainer
 from dotenv import load_dotenv
 load_dotenv()
 
-base_model = "mistralai/Mistral-7B-v0.1" #bn22/Mistral-7B-Instruct-v0.1-sharded
-dataset_name, new_model = "jcrecio/subset_afp_mistral", "jcrecio/suboptimal_afp_7B"
+base_model = os.getenv('MODEL_TO_USE')
+dataset_name, new_model = "jcrecio/AFP_Cot_Contextualized_Proofs", "jcrecio/isamath"
 
 dataset = load_dataset(dataset_name, split="train")
 
