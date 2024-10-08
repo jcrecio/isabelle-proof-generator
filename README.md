@@ -16,11 +16,15 @@ WITH_CONTEXT=False/True flag to indicate if the finetune will be contextualized
 
 USE_MODELS_OFFLINE=<true/false>
 USE_WANDB=<true/false>
+
+MODEL_TO_USE=<choose the model>
+<choose the model> can be one of the following list: https://docs.mistral.ai/getting-started/models/weights/
+example: MODEL_TO_USE=Mathstral-7B-v0.1
 ```
 
 1. Run the script `json_dataset_creator.py` to generate the dataset as a json file containing pairs (theorem statement, proof)
 
-2. Run the script `proofs_to_mistral.py <dataset json file> <output jsonl file>` to get the file in the format Mistal expects for finetuning. (Includes the finetune specialized prompt)
+2. Run the script `proofs_to_mistral.py <dataset json file> <output jsonl file>` to get the file in the format Mistral expects for finetuning. (Includes the finetune specialized prompt)
 
 The simple specialized prompt for finetune is:
 > *"You are now an specialized agent to infer proofs for theorem statements or lemmas written in Isabelle/HOL. You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding theorem statement or lemma.[INST]Infer a proof for the following Isabelle/HOL theorem statement/s: {theorem_statement}[/INST]{proof}"*
@@ -51,6 +55,11 @@ Finetuning can be setup differently depending on the machine to be run.
 ### Online
 
 If the machine has full access to the network, it will have direct access to datasets and models.
+However we need to login with an access token into Hugging Face, and go into the corresponding model in HuggingFace and activate de access. 
+1. Navigate to the hugging face model page and accept the conditions.
+2. Go to your personal settings to create an access token.
+2. Install hugging face cli
+3. Login with your right token using: ` huggingface-cli login `
 
 This is the most straightforward way to run finetuning for the base model of Mistral.
 
@@ -83,5 +92,73 @@ Our use case for an offline finetune operation is based on the Spanish Supercomp
 1. Download the dataset https://huggingface.co/datasets/jcrecio/afp_mistral
 2. Install Git LFS to be able to clone the Mistral Model repository that contains large binary https://github.com/git-lfs/git-lfs/blob/main/INSTALLING.mdfiles
 3. Run `git lfs install` in the folder
-4. Run `git clone https://huggingface.co/mistralai/Mathstral-7B-v0.1` 
+4. Run `git clone https://huggingface.co/mistralai/<model>` 
 
+## Run the model
+
+Clear the cache from pytorch finetune operations.
+```
+torch.cuda.empty_cache()
+```
+
+In order to avoid memory problems:
+```
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 256.00 MiB. GPU 0 has a total capacity of 23.64 GiB of which 156.81 MiB is free. Including non-PyTorch memory, this process has 23.48 GiB memory in use. Of the allocated memory 23.11 GiB is allocated by PyTorch, and 146.00 KiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+
+# Run
+>>> torch.cuda.empty_cache()
+>>> PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True'
+```
+
+Load the finetuned model:
+```
+model_dir = 'path to your finetuned model'
+
+model = AutoModelForCausalLM.from_pretrained(
+    pretrained_model_name_or_path=model_dir)
+```
+
+Load the tokenizer:
+```
+# tokenizer = AutoTokenizer.from_pretrained("mistralai/Mathstral-7B-v0.1")
+tokenizer = AutoTokenizer.from_pretrained("mistralai/<original model>")
+# or
+tokenizer = AutoTokenizer.from_pretrained(mistralai/<original model>, use_fast=True)
+
+#### ???
+
+tokenizer.padding_side = 'right'
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.add_eos_token = True
+tokenizer.add_bos_token, tokenizer.add_eos_token
+
+
+#### ???
+
+
+```
+
+Load the cpu/gpu device:
+```
+device = "cuda" if torch.cuda.is_available() else "cpu"
+```
+Moves model to the gpu
+```
+model = model.to(device)
+```
+
+```
+def generate_text(prompt, max_new_tokens=100):
+    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(device)
+    with torch.no_grad():
+        generated_ids = model.generate(
+            inputs.input_ids,
+            attention_mask=inputs.attention_mask,
+            pad_token=tokenizer.eos_token,
+            pad_token_id=tokenizer.eos_token_id,
+            max_new_tokens=max_new_tokens,
+            num_return_sequences=1,
+            no_repeat_ngram_size=2
+        )
+    return tokenizer.decode(generated_ids[0], skip_special_tokens=True)
+```
