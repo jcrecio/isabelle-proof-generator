@@ -25,12 +25,10 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map={"": 0}
 )
 
-
 # Config
 model.config.use_cache = False # silence the warnings. Please re-enable for inference!
 model.config.pretraining_tp = 1
 model.gradient_checkpointing_enable()
-
 
 # Tokenizer
 tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
@@ -38,11 +36,9 @@ tokenizer.pad_token = tokenizer.eos_token
 tokenizer.add_eos_token = True
 tokenizer.add_bos_token, tokenizer.add_eos_token
 
-
 # Wandb
 wandb.login(key = os.getenv('WANDB_TOKEN'))
 run = wandb.init(project='Fine tuning mistral 7B', job_type="training", anonymous="allow")
-
 
 # Prepare model
 model = prepare_model_for_kbit_training(model)
@@ -76,7 +72,6 @@ training_arguments = TrainingArguments(
     report_to="wandb"
 )
 
-
 trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
@@ -87,7 +82,6 @@ trainer = SFTTrainer(
     args=training_arguments,
     packing= False,
 )
-
 
 trainer.train()
 
