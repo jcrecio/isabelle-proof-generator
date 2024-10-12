@@ -81,7 +81,7 @@ pip install python-dotenv
 
 Run the command for finetune
 ```
-    python isabelle-proof-generator/finetune.py
+    python isabelle-proof-generator/stages/finetune.py
 ```
 
 
@@ -94,6 +94,22 @@ Our use case for an offline finetune operation is based on the Spanish Supercomp
 3. Run `git lfs install` in the folder
 4. Run `git clone https://huggingface.co/mistralai/<model>` 
 
+## Merge and push the new model to Huggingface
+
+Previously, finetuning the base model generated the delta weights on top of the base model.
+After that we will merge both the base model plus the refined knowledge (weights) and push it to HF to make it available.
+
+Set the environmental variables MODEL_TO_USE, NEW_MODEL and TOKENIZER:
+```
+MODEL_TO_USE=mistralai/Mathstral-7B-v0.1
+NEW_MODEL=jcrecio/isamath-v0.1 # isamath is the name we put to the finetuned model
+TOKENIZER=jcrecio/isamath-tokenizer-v0.1
+```
+
+Run: 
+```
+python stages/push_model.py
+```
 ## Run the model
 
 Clear the cache from pytorch finetune operations.
