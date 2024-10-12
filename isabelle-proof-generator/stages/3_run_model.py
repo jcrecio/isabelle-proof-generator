@@ -50,11 +50,13 @@ def stream(fullprompt, device, initial_max_tokens=200, continuation_tokens=100):
 This function is used to infer a proof for a given theorem statement.
 '''
 def infer_proof(context, theorem_statement, device):
-    print('Infering proof...\n')
     system_prompt = PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT if context else PROMPT_TEMPLATE_QUESTION_ANSWER
     B_INST, E_INST = f"[INST]Given the problem context {context}, " if context else "[INST]", "[/INST]"
 
     fullprompt = f"{system_prompt}{B_INST}Infer a proof for the following Isabelle/HOL theorem statement/s: {theorem_statement.strip()}\n{E_INST}"
+    print("Full prompt:\n")
+    print(fullprompt)
+    print('Infering proof...\n')
     stream(fullprompt, device)
 
 model_name = sys.argv[1]
