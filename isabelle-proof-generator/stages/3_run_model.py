@@ -43,8 +43,8 @@ torch.cuda.empty_cache()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
-model_name = sys.arg[2]
-mode_to_run = sys.arg[3]
+model_name = sys.argv[2]
+mode_to_run = sys.argv[3]
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name)
