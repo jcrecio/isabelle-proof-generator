@@ -1,6 +1,6 @@
 '''
 It takes the PISA dataset https://aitp-conference.org/2021/abstract/paper_17.pdf as input and converts it to a
-new JSON dataset with pairs: (theorem statement, proof)
+new JSON dataset with triplets: (context, theorem statement, proof)
 '''
 
 import os
@@ -87,10 +87,5 @@ with_context = os.getenv('WITH_CONTEXT')
 proofs = []
 for item in os.listdir(problems_folder):
     proofs = proofs + get_dataset_items(os.path.join(afp_folder, str(item)),os.path.join(problems_folder, str(item)), with_context)
-
-# proofs = [get_dataset_items(os.path.join(afp_folder, str(folder)),
-#                             os.path.join(problems_folder, str(folder)), with_context) 
-#           for folder in os.listdir(problems_folder) 
-#                    if os.path.isdir(os.path.join(str(folder)))]
 
 write_json_file(output_file, { 'proofs': proofs })

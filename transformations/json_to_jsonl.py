@@ -1,5 +1,15 @@
-import sys
+'''
+Converts a JSON file to JSON Lines (JSONL) format.
+Args:
+    input_file (str): The path to the input JSON file.
+    output_file (str): The path to the output JSONL file.
+The function reads the input JSON file line by line, parses each line as JSON,
+and writes it to the output file in JSONL format, where each JSON object is 
+written on a new line.
+'''
+
 import json
+import sys
 
 def json_to_jsonl(input_file, output_file):
     with open(input_file, 'r') as infile:

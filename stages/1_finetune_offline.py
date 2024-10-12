@@ -1,14 +1,15 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,TrainingArguments
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 import torch
+import os
 from datasets import load_from_disk
 from trl import SFTTrainer
 
 from dotenv import load_dotenv
 load_dotenv()
 
-base_model = "mistralai/Mistral-7B-v0.1" #bn22/Mistral-7B-Instruct-v0.1-sharded
-dataset_name, new_model = "jcrecio/subset_afp_mistral", "jcrecio/suboptimal_afp_7B"
+base_model = os.getenv('MODEL_TO_USE')
+dataset_name, new_model = "jcrecio/AFP_Cot_Contextualized_Proofs", "jcrecio/isamath"
 model_dir = 'Mistral-7B-v0.1'
 
 dataset = load_from_disk("afp_mistral")

@@ -1,3 +1,13 @@
+'''
+Converts a JSON Lines (JSONL) file to a JSON file.
+Args:
+    input_file (str): The path to the input JSONL file.
+    output_file (str): The path to the output JSON file.
+The function reads the input JSONL file line by line, converts each line 
+from JSONL format to a JSON object, and writes these objects to the output 
+JSON file as a JSON array.
+'''
+
 import json
 import sys
 

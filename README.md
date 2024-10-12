@@ -112,69 +112,13 @@ python stages/push_model.py
 ```
 ## Run the model
 
-Clear the cache from pytorch finetune operations.
+In order to run the model you have to execute the following command:
 ```
-torch.cuda.empty_cache()
+python isabelle-proof-generator/stages/3_run_model.py <model_name> <device mode>
 ```
-
-In order to avoid memory problems:
-```
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 256.00 MiB. GPU 0 has a total capacity of 23.64 GiB of which 156.81 MiB is free. Including non-PyTorch memory, this process has 23.48 GiB memory in use. Of the allocated memory 23.11 GiB is allocated by PyTorch, and 146.00 KiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
-
-# Run
->>> torch.cuda.empty_cache()
->>> PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True'
-```
-
-Load the finetuned model:
-```
-model_dir = 'path to your finetuned model'
-
-model = AutoModelForCausalLM.from_pretrained(
-    pretrained_model_name_or_path=model_dir)
-```
-
-Load the tokenizer:
-```
-# tokenizer = AutoTokenizer.from_pretrained("mistralai/Mathstral-7B-v0.1")
-tokenizer = AutoTokenizer.from_pretrained("mistralai/<original model>")
-# or
-tokenizer = AutoTokenizer.from_pretrained(mistralai/<original model>, use_fast=True)
-
-#### ???
-
-tokenizer.padding_side = 'right'
-tokenizer.pad_token = tokenizer.eos_token
-tokenizer.add_eos_token = True
-tokenizer.add_bos_token, tokenizer.add_eos_token
-
-
-#### ???
-
-
-```
-
-Load the cpu/gpu device:
-```
-device = "cuda" if torch.cuda.is_available() else "cpu"
-```
-Moves model to the gpu
-```
-model = model.to(device)
-```
-
-```
-def generate_text(prompt, max_new_tokens=100):
-    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(device)
-    with torch.no_grad():
-        generated_ids = model.generate(
-            inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            pad_token=tokenizer.eos_token,
-            pad_token_id=tokenizer.eos_token_id,
-            max_new_tokens=max_new_tokens,
-            num_return_sequences=1,
-            no_repeat_ngram_size=2
-        )
-    return tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-```
+- \<model name> is the model to run, in our case `jcrecio-isamath-v0.1`
+- \<device mode> can be gpu, cpu, half or low.
+    - cpu: Infer using CPU
+    - cuda: Infer using GPU
+    - half: Infer using GPU with half precision
+    - low: Infer using GPU with low CPU memory usage
