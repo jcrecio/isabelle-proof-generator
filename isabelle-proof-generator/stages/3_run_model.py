@@ -22,7 +22,17 @@ import sys
 PROMPT_TEMPLATE_QUESTION_ANSWER = 'You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.'
 PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT = 'You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.'
 
+def stream(fullprompt, device):
+    inputs = tokenizer([fullprompt], return_tensors="pt").to(device)
+
+    streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+
+    _ = model.generate(**inputs, streamer=streamer, max_new_tokens=200)
+
 def infer_proof(context, theorem_statement, mode_to_run, device):
+    print("Streaming")
+    stream(f"{system_prompt}{B_INST}Infer a proof for the following Isabelle/HOL theorem statement/s: {theorem_statement.strip()}\n{E_INST}", device)
+
     print('Infering proof...\n')
     system_prompt = PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT if context else PROMPT_TEMPLATE_QUESTION_ANSWER
     B_INST, E_INST = f"[INST]Given the problem context {context}, " if context else "[INST]", "[/INST]"
