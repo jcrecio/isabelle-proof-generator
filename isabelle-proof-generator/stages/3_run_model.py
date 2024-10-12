@@ -23,10 +23,18 @@ PROMPT_TEMPLATE_QUESTION_ANSWER = 'You are now an specialized agent to infer pro
 PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT = 'You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.'
 
 def infer_proof(context, theorem_statement, mode_to_run, device):
+    print('Infering proof...\n')
     system_prompt = PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT if context else PROMPT_TEMPLATE_QUESTION_ANSWER
     B_INST, E_INST = f"[INST]Given the problem context {context}, " if context else "[INST]", "[/INST]"
 
     prompt = f"{system_prompt}{B_INST}Infer a proof for the following Isabelle/HOL theorem statement/s: {theorem_statement.strip()}\n{E_INST}"
+
+    print('Complete Prompt:\n')
+    print('\n')
+    print(prompt)
+    print('\n')
+
+    print(f'mode_to_run: {mode_to_run}')
 
     if mode_to_run == 1:
         inputs = tokenizer(prompt, return_tensors="pt").to(device)
@@ -35,7 +43,7 @@ def infer_proof(context, theorem_statement, mode_to_run, device):
             output = model.generate(**inputs, max_length=100, num_return_sequences=1, temperature=0.7)
 
         generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
-        print(generated_text)
+        return generated_text
 
     elif mode_to_run == 2:
         inputs = tokenizer([prompt], return_tensors="pt").to(device)
@@ -43,7 +51,7 @@ def infer_proof(context, theorem_statement, mode_to_run, device):
         streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         generated_text = model.generate(**inputs, streamer=streamer, max_new_tokens=200)
-        print(generated_text)
+        return generated_text
 
 model_name = sys.argv[1]
 requested_device = sys.argv[2]
