@@ -39,8 +39,9 @@ def infer_proof(context, theorem_statement, mode_to_run):
         generated_text = model.generate(**inputs, streamer=streamer, max_new_tokens=200)
         print(generated_text)
 
-torch.cuda.empty_cache()
 device = "cuda" if torch.cuda.is_available() else "cpu"
+torch.cuda.empty_cache()
+PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True'
 print(f"Using device: {device}")
 
 model_name = sys.argv[2]
