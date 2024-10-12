@@ -44,8 +44,8 @@ torch.cuda.empty_cache()
 PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True'
 print(f"Using device: {device}")
 
-model_name = sys.argv[2]
-mode_to_run = sys.argv[3]
+model_name = sys.argv[1]
+mode_to_run = sys.argv[2]
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name)
