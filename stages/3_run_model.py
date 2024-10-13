@@ -83,8 +83,8 @@ if requested_device == "low":
 
 else: model = AutoModelForCausalLM.from_pretrained(model_name)
 
-model = model.to(device)
 if requested_device == "half": model = model.half()
+elif requested_device == "cuda": model = model.to(device)
 
 while(True):
     context = input("Please enter the context for the problem (or leave it empty if no context), or write EXIT to quit:")
