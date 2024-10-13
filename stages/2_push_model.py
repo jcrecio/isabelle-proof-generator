@@ -1,11 +1,19 @@
+'''
+Merge the base model with the finetuned model (delta weights) and push it to the Hub
+In order to use this script, you need to set the following environment variables:
+- MODEL_TO_USE: The name of the base model to use for merging. (Example: mistralai/Mathstral-7B-v0.1)
+- NEW_MODEL: The name of the new model to be created after merging. (Example: jcrecio/isamath-v0.1)
+- TOKENIZER: The name of the tokenizer to use for merging. (Example: mistralai/Mathstral-7B-v0.1)
+
+After setting the environment variables, you can run the script with the following command:
+> python stages/2_push_model.py
+'''
+
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
 from peft import  PeftModel
 import os, torch
 from huggingface_hub import HfApi
 
-'''
-Merge the base model with the finetuned model (delta weights) and push it to the Hub
-'''
 def merge_model_and_push(base_model, new_model, tokenizer):
     base_model_reload = AutoModelForCausalLM.from_pretrained(
         base_model, 
@@ -20,9 +28,9 @@ def merge_model_and_push(base_model, new_model, tokenizer):
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-    local_model_path = f"jcrecio/local/isamath-v0.1"
-    local_tokenizer_path = "jcrecio/local/isamath-tokenizer-v0.1"
-    repo_id = "jcrecio/isamath-v0.1"
+    local_model_path = new_model # This is the path where the model will be saved locally, in our case it matches the new_model name
+    local_tokenizer_path = f'{new_model.split("/")[0]}/isamath-tokenizer-v0.1'
+    repo_id = new_model
 
     model = model.merge_and_unload()
     model.save_pretrained(local_model_path)

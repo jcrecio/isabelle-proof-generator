@@ -48,6 +48,8 @@ def stream(fullprompt, device, initial_max_tokens=200, continuation_tokens=100):
 
 '''
 This function is used to infer a proof for a given theorem statement.
+It works as follows:
+- It composes the full prompt with the theorem statement and the context.
 '''
 def infer_proof(context, theorem_statement, device):
     system_prompt = PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT if context else PROMPT_TEMPLATE_QUESTION_ANSWER
@@ -71,12 +73,14 @@ PYTORCH_CUDA_ALLOC_CONF='expandable_segments:True'
 print(f"Using device: {device}")
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+
 if requested_device == "low":
     model = AutoModelForCausalLM.from_pretrained(
     model_name,
     device_map="auto",
     torch_dtype=torch.float16,
     low_cpu_mem_usage=True)
+
 else: model = AutoModelForCausalLM.from_pretrained(model_name)
 
 model = model.to(device)

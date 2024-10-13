@@ -1,3 +1,18 @@
+'''
+This file finetunes a model on a dataset of proofs.
+
+In order to run it, you need to set the following environment variables:
+- MODEL_TO_USE: The name of the model to use for fine-tuning. (Example: mistralai/Mathstral-7B-v0.1)
+- NEW_MODEL: The name of the new model to be created after fine-tuning. (Example: jcrecio/isamath-v0.1)
+
+- DATASET: The name of the dataset to use for fine-tuning. (Example: jcrecio/AFP_Cot_Contextualized_Proofs)
+
+- WANDB_TOKEN: Your Weights & Biases API token to store the finetune process data.
+
+After setting the environment variables, you can run the script with the following command:
+> python stages/1_finetune.py
+'''
+
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig,TrainingArguments
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 import os, torch, wandb
@@ -8,7 +23,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 base_model = os.getenv('MODEL_TO_USE')
-dataset_name, new_model = "jcrecio/AFP_Cot_Contextualized_Proofs", "jcrecio/isamath"
+new_model = os.getenv('NEW_MODEL')
+dataset_name = os.getenv('DATASET')
+wandb_token = os.getenv('WANDB_TOKEN')
 
 dataset = load_dataset(dataset_name, split="train")
 
@@ -34,7 +51,7 @@ tokenizer.pad_token = tokenizer.eos_token
 tokenizer.add_eos_token = True
 tokenizer.add_bos_token, tokenizer.add_eos_token
 
-wandb.login(key = os.getenv('WANDB_TOKEN'))
+wandb.login(key = wandb_token)
 run = wandb.init(project='Fine tuning mistral 7B', job_type="training", anonymous="allow")
 
 model = prepare_model_for_kbit_training(model)

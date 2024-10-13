@@ -1,6 +1,6 @@
 # Isabelle-proof-generator
 
-## Create the dataset
+## 0. Create the dataset
 
 ### JSON Dataset
 In order to generate a dataset to finetune a model to infer Isabelle/HOL proofs we need to start with the PISA Dataset from https://github.com/albertqjiang/Portal-to-ISAbelle
@@ -12,14 +12,15 @@ Set the following environment variables:
 PROBLEMS_FOLDER=<root folder for the PISA extractions AFP problems to create the dataset>
 AFP_FOLDER=<root folder of AFP problems>/thys
 OUTPUT_FILE_DATASET=<output dataset filepath .json for the json dataset creation>
-WITH_CONTEXT=False/True flag to indicate if the finetune will be contextualized
+WITH_CONTEXT=False/True flag to indicate if the finetune will be contextualized, that is, include a context or not for each problem
 
-USE_MODELS_OFFLINE=<true/false>
 USE_WANDB=<true/false>
 
 MODEL_TO_USE=<choose the model>
 <choose the model> can be one of the following list: https://docs.mistral.ai/getting-started/models/weights/
 example: MODEL_TO_USE=Mathstral-7B-v0.1
+NEW_MODEL=<your namespace/name of your model>
+example: jcrecio/isamath-v0.1
 ```
 
 1. Run the script `json_dataset_creator.py` to generate the dataset as a json file containing pairs (theorem statement, proof)
@@ -45,7 +46,7 @@ You are now an specialized agent to infer proofs for theorem statements or lemma
 The generated datasets are published in the following links in Huggingface: 
 https://huggingface.co/datasets/jcrecio/AFP_Cot_Contextualized_Proofs
 
-## Finetune
+## 1. Finetune
 
 The finetune will be using the datasets we generated previously or you can create a different dataset of your own.
 
@@ -80,11 +81,11 @@ pip install python-dotenv
 
 Run the command for finetune
 ```
-    python isabelle-proof-generator/stages/finetune.py
+python stages/1_finetune.py
 ```
 
 
-### Offline
+### Offline (deprecated, not in use)
 
 Our use case for an offline finetune operation is based on the Spanish Supercomputing Network (RES), which has partial access to the network to clone git repositories.
 
@@ -93,10 +94,12 @@ Our use case for an offline finetune operation is based on the Spanish Supercomp
 3. Run `git lfs install` in the folder
 4. Run `git clone https://huggingface.co/mistralai/<model>` 
 
-## Merge and push the new model to Huggingface
+## 2. Merge and push the new model to Huggingface
 
 Previously, finetuning the base model generated the delta weights on top of the base model.
 After that we will merge both the base model plus the refined knowledge (weights) and push it to HF to make it available.
+
+Note: **Make sure you install first LFS with the command `git install lfs`**
 
 Set the environmental variables MODEL_TO_USE, NEW_MODEL and TOKENIZER:
 ```
@@ -107,13 +110,13 @@ TOKENIZER=jcrecio/isamath-tokenizer-v0.1
 
 Run: 
 ```
-python stages/push_model.py
+python stages/2_push_model.py
 ```
-## Run the model
+## 3. Run the model
 
 In order to run the model you have to execute the following command:
 ```
-python isabelle-proof-generator/stages/3_run_model.py <model_name> <device mode>
+python stages/3_run_model.py <model_name> <device mode>
 ```
 - \<model name> is the model to run, in our case `jcrecio-isamath-v0.1`
 - \<device mode> can be gpu, cpu, half or low.
@@ -121,3 +124,5 @@ python isabelle-proof-generator/stages/3_run_model.py <model_name> <device mode>
     - cuda: Infer using GPU
     - half: Infer using GPU with half precision
     - low: Infer using GPU with low CPU memory usage
+
+There is a console application that will ask for an optional context, and for the problem to infer a proof from.
