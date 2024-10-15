@@ -21,6 +21,8 @@ PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT = 'You are now an specialized agent
 '''
 This function is used to stream the generated text from the model.
 '''
+
+
 def stream(fullprompt, device, initial_max_tokens=200, continuation_tokens=100):
     inputs = tokenizer([fullprompt], return_tensors="pt").to(device)
     streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
@@ -45,6 +47,17 @@ def stream(fullprompt, device, initial_max_tokens=200, continuation_tokens=100):
         initial_max_tokens = continuation_tokens
 
     return generated_text
+
+
+def infer_proof(context, theorem_statement, device):
+    system_prompt = PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT if context else PROMPT_TEMPLATE_QUESTION_ANSWER
+    B_INST, E_INST = f"[INST]Given the problem context {context}, " if context else "[INST]", "[/INST]"
+
+    fullprompt = f"{system_prompt}{B_INST}Infer a proof for the following Isabelle/HOL theorem statement/s: {theorem_statement.strip()}\n{E_INST}"
+    print("Full prompt:\n")
+    print(fullprompt)
+    print('Infering proof...\n')
+    stream(fullprompt, device)
 
 '''
 This function is used to infer a proof for a given theorem statement.
@@ -94,6 +107,6 @@ while(True):
     if theorem_statement == "EXIT":
         break
 
-    proof = infer_proof(context, theorem_statement, device)
+    proof = stream(context, device)
     print('Inferred proof:\n')
     print(proof)
