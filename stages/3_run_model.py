@@ -107,6 +107,6 @@ while(True):
     if theorem_statement == "EXIT":
         break
 
-    proof = stream(context, device)
+    proof = infer_proof(context, theorem_statement, device)
     print('Inferred proof:\n')
     print(proof)
