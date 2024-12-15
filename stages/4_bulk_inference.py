@@ -1,7 +1,7 @@
 '''
 This script is used to run the model to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL.
 Usage:
-    python isabelle-proof-generator/stages/3_run_model.py <model_name> <device mode>
+    python isabelle-proof-generator/stages/4_bulk_inference.py <model_name> <device mode>
     - model_name: The name of the model to use for inference.
 
     - device mode: The device to use for inference. It can be cpu, cuda, half or low.

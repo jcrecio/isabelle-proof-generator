@@ -23,9 +23,9 @@ NEW_MODEL=<your namespace/name of your model>
 example: jcrecio/isamath-v0.1
 ```
 
-1. Run the script `json_dataset_creator.py` to generate the dataset as a json file containing pairs (theorem statement, proof)
+1. Run the script `1_json_dataset_creator.py` to generate the dataset as a json file containing pairs (theorem statement, proof)
 
-2. Run the script `proofs_to_mistral.py <dataset json file> <output jsonl file>` to get the file in the format Mistral expects for finetuning. (Includes the finetune specialized prompt)
+2. Run the script `2_proofs_to_mistral.py <dataset json file> <output jsonl file>` to get the file in the format Mistral expects for finetuning. (Includes the finetune specialized prompt)
 
 The simple specialized prompt for finetune is:
 > *"You are now an specialized agent to infer proofs for theorem statements or lemmas written in Isabelle/HOL. You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding theorem statement or lemma.[INST]Infer a proof for the following Isabelle/HOL theorem statement/s: {theorem_statement}[/INST]{proof}"*
