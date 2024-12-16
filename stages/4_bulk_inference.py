@@ -100,7 +100,12 @@ if requested_device == "half": model = model.half()
 elif requested_device == "cuda": model = model.to(device)
 
 problems = [
-    {'context': '''We define the SLin I/O-automaton and prove its composition property. The SLin I/O-automaton is at the heart of the Speculative Linearizability framework. This framework simplifies devising robust distributed algorithms by enabling their decomposition into independent modules that can be analyzed and proved correct in isolation. It is particularly useful when working in a distributed environment, where the need to tolerate faults and asynchrony has made current monolithic protocols so intricate that it is no longer tractable to check their correctness. Our theory contains a formalization of simulation proof techniques in the I/O-automata of Lynch and Tuttle and a typical example of a refinement proof.''', 'theorem_statement': '''
+    {'context': '''Here it is an Isabelle/HOL theory that demonstrates several basic concepts.:
+1. add_zero_right: Shows that adding 0 to any number on the right gives the same number
+2. distrib_left: Demonstrates the distributive property of multiplication over addition
+3. less_than_zero: Shows that any natural number is less than its successor
+4. add_increases: Proves that adding a non-zero number to another number increases it
+5. append_nil: Shows that appending an empty list to any list gives the original list''', 'theorem_statement': '''
 theorem distrib_left: "a * (b + c) = a * b + a * c"
 by simp
 theorem less_than_zero: "⋀n::nat. n < Suc n"
