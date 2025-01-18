@@ -46,6 +46,7 @@ def stream(
     initial_max_tokens=200,
     continuation_tokens=100,
     max_generation_tokens=8192,
+    max_iterations=50,
 ):
     try:
         tokens_to_generate = initial_max_tokens
@@ -63,7 +64,14 @@ def stream(
 
             accumulated_tokens = tokens_to_generate
             generated_text = ""
+            iteration_count = 0
+
             while accumulated_tokens < max_generation_tokens:
+                if iteration_count >= max_iterations:
+                    print("Maximum iterations reached, stopping generation.")
+                    break
+
+                iteration_count += 1
                 accumulated_tokens += tokens_to_generate
                 outputs = model.generate(
                     **inputs,
@@ -76,9 +84,14 @@ def stream(
                     use_cache=True,
                 )
 
-                generated_text += tokenizer.decode(outputs[0], skip_special_tokens=True)
+                new_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                generated_text += new_text
 
                 if outputs[0][-1] == tokenizer.eos_token_id:
+                    break
+
+                if new_text.strip() in generated_text[: -len(new_text)].strip():
+                    print("Repetitive sequence detected, stopping generation.")
                     break
 
                 del outputs
@@ -206,6 +219,9 @@ def main():
         context = problem["context"]
         theorem_statement = problem["theorem_statement"]
         try:
+            print("Problem to solve:\n")
+            print(theorem_statement)
+            print()
             proof = infer_proof(context, theorem_statement, device, model, tokenizer)
             print("Inferred proof:\n")
             print(proof)
