@@ -114,7 +114,7 @@ python stages/2_push_model.py
 ```
 ## 3. Run the model
 
-In order to run the model you have to execute the following command:
+In order to run the model interactively you have to execute the following command:
 ```
 python stages/3_run_model.py <model_name> <device mode>
 ```
@@ -126,6 +126,13 @@ python stages/3_run_model.py <model_name> <device mode>
     - low: Infer using GPU with low CPU memory usage
 
 There is a console application that will ask for an optional context, and for the problem to infer a proof from.
+
+## 4. Bulk-run the model
+In order to run the modal in bulk with a lot of samples (from the dataset jcrecio/AFP_Theories).
+
+```
+python stages/4_bulk_inference.py <model_name> <device mode> <number of problems to solve (from dataset)>
+```
 
 :warning: Trick for Picasso machine: 
 Activate a conda environment and install the dependencies with pip.
