@@ -1,4 +1,4 @@
-'''
+"""
 Converts a JSON file to JSON Lines (JSONL) format.
 Args:
     input_file (str): The path to the input JSON file.
@@ -6,18 +6,21 @@ Args:
 The function reads the input JSON file line by line, parses each line as JSON,
 and writes it to the output file in JSONL format, where each JSON object is 
 written on a new line.
-'''
+"""
 
 import json
 import sys
 
+
 def json_to_jsonl(input_file, output_file):
-    with open(input_file, 'r') as infile:
-        with open(output_file, 'w') as outfile:
-            for line in infile:
-                json_data = json.loads(line)
-                json.dump(json_data, outfile)
-                outfile.write('\n')
+    with open(input_file, "r") as infile:
+        json_data = json.load(infile)
+        problems = json_data.get("proofs")
+        with open(output_file, "w") as outfile:
+            for problem in problems:
+                json.dump(problem, outfile)
+                outfile.write("\n")
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
