@@ -187,7 +187,7 @@ def main():
 
     model_name = sys.argv[1]
     requested_device = sys.argv[2]
-    number_of_problems = sys.argv[3]
+    number_of_problems = int(sys.argv[3])
 
     if requested_device == "cpu":
         device = torch.device("cpu")
@@ -233,7 +233,9 @@ def main():
         )
 
     dataset = load_dataset("jcrecio/AFP_Cot_Contextualized_Proofs")
+
     problems_keys = list(dataset.keys())[0]
+    print(f"Problems keys to work with: {problems_keys}")
     problems = [
         dict(row) for row in dataset[problems_keys].select(range(number_of_problems))
     ]
