@@ -84,6 +84,8 @@ def stream(
 
         print(get_gpu_memory_info())
 
+        stop_sequences = ["qed", "done", "by auto", "by blast", "by simp"]
+
         with torch.cuda.amp.autocast(enabled=True):
             inputs = tokenizer(
                 [fullprompt], return_tensors="pt", truncation=True, max_length=2048
@@ -96,6 +98,8 @@ def stream(
             accumulated_tokens = tokens_to_generate
             generated_text = ""
             iteration_count = 0
+            repeated_end_count = 0
+            last_chunks = []
 
             while accumulated_tokens < max_generation_tokens:
                 if iteration_count >= max_iterations:
@@ -126,14 +130,31 @@ def stream(
                 thread.join()
                 generated_text += generated_chunk
 
-                if tokenizer.eos_token_id in inputs["input_ids"][0]:
+                if any(stop_seq in generated_chunk for stop_seq in stop_sequences):
+                    print("\nStop sequence detected, ending generation.")
                     break
 
-                if (
-                    generated_chunk.strip()
-                    in generated_text[: -len(generated_chunk)].strip()
+                last_chunks.append(generated_chunk.strip())
+                if len(last_chunks) > 3:
+                    last_chunks.pop(0)
+
+                if generated_chunk.strip() == "end":
+                    repeated_end_count += 1
+                    if repeated_end_count >= 3:
+                        print(
+                            "\nRepetitive 'end' pattern detected, stopping generation."
+                        )
+                        break
+                else:
+                    repeated_end_count = 0
+
+                if len(last_chunks) >= 2 and all(
+                    chunk == last_chunks[0] for chunk in last_chunks
                 ):
                     print("\nRepetitive sequence detected, stopping generation.")
+                    break
+
+                if tokenizer.eos_token_id in inputs["input_ids"][0]:
                     break
 
                 clear_gpu_memory()
@@ -146,7 +167,12 @@ def stream(
                 ).to(device)
                 tokens_to_generate = continuation_tokens
 
-        return generated_text
+        # Clean up any trailing repetitive "end"s
+        final_text = generated_text.rstrip()
+        while final_text.endswith("end\nend"):
+            final_text = final_text.rsplit("end\n", 1)[0]
+
+        return final_text
 
     except RuntimeError as e:
         if "out of memory" in str(e):
