@@ -247,9 +247,14 @@ def main():
     for problem in problems:
         context = problem["context"]
         theorem_statement = problem["theorem_statement"]
+        original_proof = problem["proof"]
         try:
+            print("Context:\n")
+            print(theorem_statement)
             print("Problem to solve:\n")
             print(theorem_statement)
+            print("Original proof:\n")
+            print(original_proof)
             print()
             proof = infer_proof(context, theorem_statement, device, model, tokenizer)
             print("Inferred proof:\n")
