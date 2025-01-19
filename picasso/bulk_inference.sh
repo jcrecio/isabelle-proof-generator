@@ -38,11 +38,10 @@
 #SBATCH --output=isamath.%J.out
 
 
-# Initialize conda for bash
 eval "$(conda shell.bash hook)"
 
-conda activate jgpu # conda env with all the dependencies
+conda activate jgpu
 
 hostname
 
-time python3 stages/4_bulk_inference.py jcrecio/isamath-v0.1 half
+time python3 stages/4_bulk_inference.py jcrecio/isamath-v0.1 half 1

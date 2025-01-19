@@ -126,3 +126,17 @@ python stages/3_run_model.py <model_name> <device mode>
     - low: Infer using GPU with low CPU memory usage
 
 There is a console application that will ask for an optional context, and for the problem to infer a proof from.
+
+:warning: Trick for Picasso machine: 
+Activate a conda environment and install the dependencies with pip.
+`conda create -n jgpu python=3.9`
+
+`conda activate jgpu`
+```
+pip install -q -U bitsandbytes
+pip install -q -U git+https://github.com/huggingface/transformers.git
+pip install -q -U git+https://github.com/huggingface/peft.git
+pip install -q -U git+https://github.com/huggingface/accelerate.git
+pip install -q trl xformers wandb datasets einops sentencepiece
+pip install python-dotenv
+```

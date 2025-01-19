@@ -7,7 +7,14 @@ Usage:
     - number of problems to solve: up to how many problems to do bulk inferene
 """
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TextIteratorStreamer,
+)
+
+from threading import Thread
+
 from datasets import load_dataset
 import torch
 import sys
@@ -38,6 +45,28 @@ def get_gpu_memory_info():
     return "GPU not available"
 
 
+class RealTimeStreamer(TextIteratorStreamer):
+    """Custom streamer that prints tokens in real-time"""
+
+    def on_finalized_text(self, text: str, stream_end: bool = False):
+        print(text, end="", flush=True)
+
+
+"""
+This function is used to generate a response from the model using a streaming approach.
+The parameters are used as follows:
+- fullprompt: The full prompt to use for generation.
+- device: The device to use for inference.
+- model: The model to use for inference.
+- tokenizer: The tokenizer to use for inference.
+- initial_max_tokens: The initial number of tokens to generate, this is used for the first iteration and then it is set to continuation_tokens.
+- continuation_tokens: The number of tokens to generate in each iteration after the first one.
+- max_generation_tokens: The maximum number of tokens to generate in total.
+- max_iterations: The maximum number of iterations to perform.
+
+"""
+
+
 def stream(
     fullprompt,
     device,
@@ -58,7 +87,8 @@ def stream(
             inputs = tokenizer(
                 [fullprompt], return_tensors="pt", truncation=True, max_length=2048
             ).to(device)
-            streamer = TextStreamer(
+
+            streamer = RealTimeStreamer(
                 tokenizer, skip_prompt=True, skip_special_tokens=True
             )
 
@@ -68,12 +98,13 @@ def stream(
 
             while accumulated_tokens < max_generation_tokens:
                 if iteration_count >= max_iterations:
-                    print("Maximum iterations reached, stopping generation.")
+                    print("\nMaximum iterations reached, stopping generation.")
                     break
 
                 iteration_count += 1
                 accumulated_tokens += tokens_to_generate
-                outputs = model.generate(
+
+                generation_kwargs = dict(
                     **inputs,
                     streamer=streamer,
                     max_new_tokens=tokens_to_generate,
@@ -84,17 +115,26 @@ def stream(
                     use_cache=True,
                 )
 
-                new_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-                generated_text += new_text
+                thread = Thread(target=model.generate, kwargs=generation_kwargs)
+                thread.start()
 
-                if outputs[0][-1] == tokenizer.eos_token_id:
+                generated_chunk = ""
+                for new_text in streamer:
+                    generated_chunk += new_text
+
+                thread.join()
+                generated_text += generated_chunk
+
+                if tokenizer.eos_token_id in inputs["input_ids"][0]:
                     break
 
-                if new_text.strip() in generated_text[: -len(new_text)].strip():
-                    print("Repetitive sequence detected, stopping generation.")
+                if (
+                    generated_chunk.strip()
+                    in generated_text[: -len(generated_chunk)].strip()
+                ):
+                    print("\nRepetitive sequence detected, stopping generation.")
                     break
 
-                del outputs
                 clear_gpu_memory()
 
                 inputs = tokenizer(
@@ -197,23 +237,6 @@ def main():
     problems = [
         dict(row) for row in dataset[problems_keys].select(range(number_of_problems))
     ]
-
-    #     problems = [
-    #         {
-    #             "context": """Here it is an Isabelle/HOL theory that demonstrates several basic concepts.:
-    # 1. add_zero_right: Shows that adding 0 to any number on the right gives the same number
-    # 2. distrib_left: Demonstrates the distributive property of multiplication over addition
-    # 3. less_than_zero: Shows that any natural number is less than its successor
-    # 4. add_increases: Proves that adding a non-zero number to another number increases it
-    # 5. append_nil: Shows that appending an empty list to any list gives the original list""",
-    #             "theorem_statement": '''
-    # theorem distrib_left: "a * (b + c) = a * b + a * c"
-    # by simp
-    # theorem less_than_zero: "⋀n::nat. n < Suc n"
-    # by simp
-    # theorem add_increases: "⋀a b::nat. a ≠ 0 ⟹ b < a + b"''',
-    #         }
-    #     ]
 
     for problem in problems:
         context = problem["context"]
