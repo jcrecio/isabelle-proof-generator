@@ -14,10 +14,11 @@ import sys
 
 def json_to_jsonl(input_file, output_file):
     with open(input_file, "r") as infile:
+        json_data = json.load(infile)
+        problems = json_data.get("proofs")
         with open(output_file, "w") as outfile:
-            for line in infile:
-                json_data = json.loads(line)
-                json.dump(json_data, outfile)
+            for problem in problems:
+                json.dump(problem, outfile)
                 outfile.write("\n")
 
 

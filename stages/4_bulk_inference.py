@@ -14,12 +14,13 @@ from transformers import (
 )
 
 from threading import Thread
-
 from datasets import load_dataset
+
 import torch
 import sys
 import gc
 import os
+import re
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
@@ -46,7 +47,7 @@ def get_gpu_memory_info():
 
 
 class RealTimeStreamer(TextIteratorStreamer):
-    """Custom streamer that prints tokens in real-time"""
+    """Streamer that prints tokens in real-time"""
 
     def on_finalized_text(self, text: str, stream_end: bool = False):
         print(text, end="", flush=True)
@@ -181,13 +182,17 @@ def infer_proof(context, theorem_statement, device, model, tokenizer):
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) < 4:
         print("Usage: python script.py <model_name> <device_mode> <number of problems>")
         sys.exit(1)
 
-    model_name = sys.argv[1]
-    requested_device = sys.argv[2]
-    number_of_problems = int(sys.argv[3])
+    # model_name = sys.argv[1]
+    # requested_device = sys.argv[2]
+    # number_of_problems = int(sys.argv[3])
+
+    model_name = "jcrecio/isamath-v0.1"
+    requested_device = "cpu"
+    number_of_problems = 1
 
     if requested_device == "cpu":
         device = torch.device("cpu")
@@ -205,6 +210,7 @@ def main():
     clear_gpu_memory()
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    dataset = load_dataset("jcrecio/AFP_Cot_Contextualized_Proofs")
 
     try:
         if requested_device == "low":
@@ -232,10 +238,8 @@ def main():
             model_name, torch_dtype=torch.float16, low_cpu_mem_usage=True
         )
 
-    dataset = load_dataset("jcrecio/AFP_Cot_Contextualized_Proofs")
-
+    dataset = load_dataset("jcrecio/AFP_Theories")
     problems_keys = list(dataset.keys())[0]
-    print(f"Problems keys to work with: {problems_keys}")
     problems = [
         dict(row) for row in dataset[problems_keys].select(range(number_of_problems))
     ]
