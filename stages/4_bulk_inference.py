@@ -20,7 +20,6 @@ import torch
 import sys
 import gc
 import os
-import re
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
@@ -275,13 +274,16 @@ def main():
         theorem_statement = problem["theorem_statement"]
         original_proof = problem["proof"]
         try:
+            print("Solving problem....")
             print("Context:\n")
-            print(theorem_statement)
+            print(context)
+            print("\n\n\n")
             print("Problem to solve:\n")
             print(theorem_statement)
+            print("\n\n\n")
             print("Original proof:\n")
             print(original_proof)
-            print()
+            print("\n\n\n")
             proof = infer_proof(context, theorem_statement, device, model, tokenizer)
             print("Inferred proof:\n")
             print(proof)
