@@ -20,7 +20,6 @@ import torch
 import sys
 import gc
 import os
-import re
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
@@ -84,6 +83,8 @@ def stream(
 
         print(get_gpu_memory_info())
 
+        stop_sequences = ["qed", "done", "by auto", "by blast", "by simp"]
+
         with torch.cuda.amp.autocast(enabled=True):
             inputs = tokenizer(
                 [fullprompt], return_tensors="pt", truncation=True, max_length=2048
@@ -96,6 +97,8 @@ def stream(
             accumulated_tokens = tokens_to_generate
             generated_text = ""
             iteration_count = 0
+            repeated_end_count = 0
+            last_chunks = []
 
             while accumulated_tokens < max_generation_tokens:
                 if iteration_count >= max_iterations:
@@ -126,14 +129,31 @@ def stream(
                 thread.join()
                 generated_text += generated_chunk
 
-                if tokenizer.eos_token_id in inputs["input_ids"][0]:
+                if any(stop_seq in generated_chunk for stop_seq in stop_sequences):
+                    print("\nStop sequence detected, ending generation.")
                     break
 
-                if (
-                    generated_chunk.strip()
-                    in generated_text[: -len(generated_chunk)].strip()
+                last_chunks.append(generated_chunk.strip())
+                if len(last_chunks) > 3:
+                    last_chunks.pop(0)
+
+                if generated_chunk.strip() == "end":
+                    repeated_end_count += 1
+                    if repeated_end_count >= 3:
+                        print(
+                            "\nRepetitive 'end' pattern detected, stopping generation."
+                        )
+                        break
+                else:
+                    repeated_end_count = 0
+
+                if len(last_chunks) >= 2 and all(
+                    chunk == last_chunks[0] for chunk in last_chunks
                 ):
                     print("\nRepetitive sequence detected, stopping generation.")
+                    break
+
+                if tokenizer.eos_token_id in inputs["input_ids"][0]:
                     break
 
                 clear_gpu_memory()
@@ -146,7 +166,12 @@ def stream(
                 ).to(device)
                 tokens_to_generate = continuation_tokens
 
-        return generated_text
+        # Clean up any trailing repetitive "end"s
+        final_text = generated_text.rstrip()
+        while final_text.endswith("end\nend"):
+            final_text = final_text.rsplit("end\n", 1)[0]
+
+        return final_text
 
     except RuntimeError as e:
         if "out of memory" in str(e):
@@ -186,13 +211,9 @@ def main():
         print("Usage: python script.py <model_name> <device_mode> <number of problems>")
         sys.exit(1)
 
-    # model_name = sys.argv[1]
-    # requested_device = sys.argv[2]
-    # number_of_problems = int(sys.argv[3])
-
-    model_name = "jcrecio/isamath-v0.1"
-    requested_device = "cpu"
-    number_of_problems = 1
+    model_name = sys.argv[1]
+    requested_device = sys.argv[2]
+    number_of_problems = int(sys.argv[3])
 
     if requested_device == "cpu":
         device = torch.device("cpu")
@@ -210,7 +231,6 @@ def main():
     clear_gpu_memory()
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    dataset = load_dataset("jcrecio/AFP_Cot_Contextualized_Proofs")
 
     try:
         if requested_device == "low":
@@ -249,13 +269,16 @@ def main():
         theorem_statement = problem["theorem_statement"]
         original_proof = problem["proof"]
         try:
+            print("Solving problem....")
             print("Context:\n")
-            print(theorem_statement)
+            print(context)
+            print("\n\n\n")
             print("Problem to solve:\n")
             print(theorem_statement)
+            print("\n\n\n")
             print("Original proof:\n")
             print(original_proof)
-            print()
+            print("\n\n\n")
             proof = infer_proof(context, theorem_statement, device, model, tokenizer)
             print("Inferred proof:\n")
             print(proof)
