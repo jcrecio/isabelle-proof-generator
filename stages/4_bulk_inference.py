@@ -211,13 +211,9 @@ def main():
         print("Usage: python script.py <model_name> <device_mode> <number of problems>")
         sys.exit(1)
 
-    # model_name = sys.argv[1]
-    # requested_device = sys.argv[2]
-    # number_of_problems = int(sys.argv[3])
-
-    model_name = "jcrecio/isamath-v0.1"
-    requested_device = "cpu"
-    number_of_problems = 1
+    model_name = sys.argv[1]
+    requested_device = sys.argv[2]
+    number_of_problems = int(sys.argv[3])
 
     if requested_device == "cpu":
         device = torch.device("cpu")
@@ -235,7 +231,6 @@ def main():
     clear_gpu_memory()
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    dataset = load_dataset("jcrecio/AFP_Cot_Contextualized_Proofs")
 
     try:
         if requested_device == "low":
