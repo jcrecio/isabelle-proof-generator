@@ -75,6 +75,12 @@ WANDB_TOKEN=<token to register and track in WandDb>
 Install the following libraries (regardless of the system chosen to manage dependencies: pip, venv, conda, poetry, etc)
 ```
 # In this case we use pip
+
+:warning: for UMA AI machine, create a virtual env before installing dependencies:
+python3 -m venv <env>
+source <env>/bin/activate
+
+
 pip install -q -U bitsandbytes
 pip install -q -U git+https://github.com/huggingface/transformers.git
 pip install -q -U git+https://github.com/huggingface/peft.git
