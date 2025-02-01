@@ -99,11 +99,8 @@ trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
     peft_config=peft_config,
-    # max_seq_length=None,
-    dataset_text_field="proof",
     tokenizer=tokenizer,
     args=training_arguments,
-    packing=False,
 )
 
 trainer.train()

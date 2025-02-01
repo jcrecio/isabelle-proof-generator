@@ -45,7 +45,7 @@ def proofs_jsonl_to_mistral(input_file, output_file):
                 theorem_statement = problem.get("theorem_statement")
                 proof = problem.get("proof")
                 json.dump(
-                    {"proof": map_prompt(context, theorem_statement, proof)}, outfile
+                    {"text": map_prompt(context, theorem_statement, proof)}, outfile
                 )
                 outfile.write("\n")
 
