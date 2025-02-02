@@ -70,9 +70,14 @@ tokenizer.pad_token = tokenizer.eos_token
 tokenizer.add_eos_token = True
 tokenizer.add_bos_token, tokenizer.add_eos_token
 
+
+def get_current_timestamp():
+    return datetime.now().strftime("%Y%m%d%H%M%S")
+
+
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project=f"{datetime.now().strftime("%H:%M:%S")} Mathstral 7B => FINETUNE",
+    project=f"{get_current_timestamp()} Mathstral 7B => FINETUNE",
     job_type="training",
     anonymous="allow",
 )
