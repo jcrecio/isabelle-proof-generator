@@ -14,6 +14,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from huggingface_hub import HfApi
+from dotenv import load_dotenv
 
 
 def merge_model_and_push(base_model, new_model, tokenizer, tokenizer_version):
@@ -58,6 +59,7 @@ def merge_model_and_push(base_model, new_model, tokenizer, tokenizer_version):
 
 torch.cuda.empty_cache()
 
+load_dotenv()
 base_model = os.getenv("MODEL_TO_USE")
 new_model = os.getenv("NEW_MODEL")
 tokenizer = os.getenv("TOKENIZER")
