@@ -63,4 +63,4 @@ new_model = os.getenv("NEW_MODEL")
 tokenizer = os.getenv("TOKENIZER")
 tokenizer_version = os.getenv("TOKENIZER_VERSION")
 
-merge_model_and_push(base_model, new_model, tokenizer)
+merge_model_and_push(base_model, new_model, tokenizer, tokenizer_version)
