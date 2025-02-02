@@ -5,7 +5,10 @@ In order to use this script, you need to set the following environment variables
 - NEW_MODEL: The name of the new model to be created after merging. (Example: jcrecio/isamath-v0.2)
 - TOKENIZER: The name of the tokenizer to use for merging. (Example: mistralai/Mathstral-7B-v0.2)
 
-After setting the environment variables, you can run the script with the following command:
+After setting the environment variables, you need to login with your user into hugging-face:
+$ huggingface-cli login
+
+And only then, you can run the script with the following command:
 > python stages/2_push_model.py
 """
 
