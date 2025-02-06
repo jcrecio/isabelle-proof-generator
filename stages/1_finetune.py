@@ -22,6 +22,7 @@ from transformers import (
     BitsAndBytesConfig,
     TrainingArguments,
 )
+from transformers.trainer_callback import EarlyStoppingCallback
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 import os
 import torch
@@ -48,7 +49,9 @@ wandb_token = os.getenv("WANDB_TOKEN")
 train_file = os.getenv("TRAINING_FILE")
 
 dataset = load_dataset(dataset_name, data_files={"train": train_file}, split="train")
-dataset = load_dataset(dataset_name, split="train")
+dataset_dict = dataset.train_test_split(test_size=0.1, seed=42)
+train_dataset = dataset_dict["train"]
+eval_dataset = dataset_dict["test"]
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -106,16 +109,26 @@ training_arguments = TrainingArguments(
     fp16=config["fp16"],
     bf16=config["bf16"],
     max_grad_norm=config["max_grad_norm"],
-    max_steps=config["max_steps"],
+    # max_steps=config["max_steps"],
     warmup_ratio=config["warmup_ratio"],
     group_by_length=config["group_by_length"],
     lr_scheduler_type=config["lr_scheduler_type"],
     report_to=config["report_to"],
+    load_best_model_at_end=True,
+    metric_for_best_model="loss",
+    greater_is_better=False,
+    # evaluation_strategy="steps",
+    eval_strategy="steps",
+    eval_steps=config["eval_steps"],
 )
 
 trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
+    eval_dataset=eval_dataset,
+    callbacks=[
+        EarlyStoppingCallback(early_stopping_patience=0, early_stopping_threshold=0.03)
+    ],
     peft_config=peft_config,
     tokenizer=tokenizer,
     args=training_arguments,
