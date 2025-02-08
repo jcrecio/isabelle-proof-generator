@@ -11,7 +11,7 @@ login(hf_token)
 
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project="isamath-v0.23-deepkseekR1",
+    project="isamath-v0.23-deepkseekR1-test",
     job_type="training",
     anonymous="allow",
 )
@@ -62,4 +62,5 @@ outputs = model.generate(
     use_cache=True,
 )
 response = tokenizer.batch_decode(outputs)
+print(response)
 print(response[0].split("### Response:")[1])
