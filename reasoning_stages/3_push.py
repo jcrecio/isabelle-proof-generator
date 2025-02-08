@@ -1,5 +1,10 @@
 from unsloth import FastLanguageModel
 from peft import PeftModel
+from huggingface_hub import login
+import os
+
+hf_token = os.getenv("HF_TOKEN")
+login(hf_token)
 
 base_model_path = "unsloth/DeepSeek-R1-Distill-Llama-8B"
 lora_model_path = "jcrecio/risamath-v0.1"
