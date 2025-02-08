@@ -104,6 +104,18 @@ Our use case for an offline finetune operation is based on the Spanish Supercomp
 3. Run `git lfs install` in the folder
 4. Run `git clone https://huggingface.co/mistralai/<model>` 
 
+
+
+### Reasoning Finetune
+1. Install rest of previous dependencies but also add unsloth
+```
+    pip install unsloth
+    pip install --force-reinstall --no-cache-dir --no-deps git+https://github.com/unslothai/unsloth.git
+```
+
+And to run it:
+`python reasoning_stages/1_finetune.py`
+
 ## 2. Merge and push the new model to Huggingface
 
 Previously, finetuning the base model generated the delta weights on top of the base model.
