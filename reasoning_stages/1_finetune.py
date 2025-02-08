@@ -71,9 +71,7 @@ def formatting_prompts_func(examples):
 
 
 # dataset = load_dataset("jcrecio/AFP_Theories","en", split = "train[0:500]",trust_remote_code=True)
-dataset = load_dataset(
-    "jcrecio/AFP_Theories", "en", split="train", trust_remote_code=True
-)
+dataset = load_dataset("jcrecio/AFP_Theories", split="train", trust_remote_code=True)
 dataset = dataset.map(
     formatting_prompts_func,
     batched=True,
