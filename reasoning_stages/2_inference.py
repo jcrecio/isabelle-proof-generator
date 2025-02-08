@@ -21,14 +21,14 @@ Before answering, think carefully about the question and create a step-by-step c
 You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
 Infer a proof for the following Isabelle/HOL theorem statement.
 
+### Context:
+{}
+
 ### Theorem statement:
 {}
 
 ### Proof:
-<think>
-{}
-</think>
-{}"""
+<think>{}"""
 
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name="jcrecio/risamath-v0.1",
