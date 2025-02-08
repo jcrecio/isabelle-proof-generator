@@ -63,4 +63,3 @@ outputs = model.generate(
 )
 response = tokenizer.batch_decode(outputs)
 print(response)
-print(response[0].split("### Response:")[1])
