@@ -58,12 +58,12 @@ EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
 
 
 def formatting_prompts_func(examples):
-    inputs = examples["context"]
-    cots = examples["theorem_statement"]
-    outputs = examples["proof"]
+    contexts = examples["context"]
+    theorem_statements = examples["theorem_statement"]
+    proofs = examples["proof"]
     texts = []
-    for input, cot, output in zip(inputs, cots, outputs):
-        text = train_prompt_style.format(input, cot, output) + EOS_TOKEN
+    for context, theorem_statement, proof in zip(contexts, theorem_statements, proofs):
+        text = train_prompt_style.format(context, theorem_statement, proof) + EOS_TOKEN
         texts.append(text)
     return {
         "text": texts,
@@ -71,7 +71,12 @@ def formatting_prompts_func(examples):
 
 
 # dataset = load_dataset("jcrecio/AFP_Theories","en", split = "train[0:500]",trust_remote_code=True)
-dataset = load_dataset("jcrecio/AFP_Theories", split="train", trust_remote_code=True)
+dataset = load_dataset(
+    "jcrecio/AFP_Theories",
+    data_files="afp_extractions.jsonl",
+    split="train",
+    trust_remote_code=True,
+)
 dataset = dataset.map(
     formatting_prompts_func,
     batched=True,
