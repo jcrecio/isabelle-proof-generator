@@ -5,6 +5,7 @@ from datasets import load_dataset
 from unsloth import is_bfloat16_supported, FastLanguageModel
 from trl import SFTTrainer
 from transformers import TrainingArguments
+from peft import PeftModel
 
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
@@ -30,13 +31,18 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 ### Proof:
 <think>{}"""
 
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name="jcrecio/risamath-v0.1",
+
+base_model_name = "unsloth/DeepSeek-R1-Distill-Llama-8B"
+offline_model_path = "jcrecio/risamath-v0.1"
+
+base_model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name=base_model_name,
     max_seq_length=max_seq_length,
     dtype=dtype,
     load_in_4bit=load_in_4bit,
-    token=hf_token,
 )
+
+model = PeftModel.from_pretrained(base_model, offline_model_path)
 
 
 def infer_proof(context, theorem_statement, device):
