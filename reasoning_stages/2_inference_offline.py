@@ -62,7 +62,7 @@ def infer_proof(context, theorem_statement, device):
 
 def generate_text(prompt):
     inputs = tokenizer(
-        [prompt_style.format(prompt, "NO CONTEXT" "")], return_tensors="pt"
+        [prompt_style.format("NO CONTEXT", prompt, "")], return_tensors="pt"
     ).to("cuda")
 
     outputs = model.generate(
