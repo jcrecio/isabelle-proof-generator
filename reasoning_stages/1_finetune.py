@@ -42,6 +42,9 @@ Before answering, think carefully about the question and create a step-by-step c
 You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
 Infer a proof for the following Isabelle/HOL theorem statement.
 
+### Context:
+{}
+
 ### Theorem statement:
 {}
 
@@ -70,7 +73,6 @@ def formatting_prompts_func(examples):
     }
 
 
-# dataset = load_dataset("jcrecio/AFP_Theories","en", split = "train[0:500]",trust_remote_code=True)
 dataset = load_dataset(
     "jcrecio/AFP_Theories",
     data_files="afp_extractions.jsonl",
