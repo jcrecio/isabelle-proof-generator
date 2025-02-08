@@ -68,6 +68,6 @@ new_model = os.getenv("NEW_MODEL")
 tokenizer = os.getenv("TOKENIZER")
 tokenizer_version = os.getenv("TOKENIZER_VERSION")
 hf_token = os.getenv("HF_TOKEN")
-login(token=hf_token)
+login(hf_token)
 
 merge_model_and_push(base_model, new_model, tokenizer, tokenizer_version)
