@@ -13,7 +13,8 @@ from transformers import AutoTokenizer
 from transformers import pipeline
 from unsloth import FastLanguageModel
 
-EMBEDDING_MODEL_NAME = "jcrecio/risamath-v0.1"
+# EMBEDDING_MODEL_NAME = "jcrecio/risamath-v0.1"
+EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 # Load the knowledge vector database
 

@@ -37,7 +37,7 @@ MARKDOWN_SEPARATORS = [
 ]
 
 # jcrecio: choose a different embedding model? which criteria to use? Mathstral? generico?
-EMBEDDING_MODEL_NAME = "jcrecio/risamath-v0.1"
+EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
 def split_documents(
