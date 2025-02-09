@@ -116,6 +116,11 @@ Our use case for an offline finetune operation is based on the Spanish Supercomp
 And to run it:
 `python reasoning_stages/1_finetune.py`
 
+### RAG inference
+```
+    pip install -q torch transformers accelerate bitsandbytes langchain sentence-transformers faiss-cpu openpyxl pacmap datasets langchain-community ragatouille
+```
+
 ## 2. Merge and push the new model to Huggingface
 
 Previously, finetuning the base model generated the delta weights on top of the base model.

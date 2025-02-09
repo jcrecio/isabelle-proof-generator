@@ -1,7 +1,6 @@
 import sys
 import datasets
 import pandas as pd
-import matplotlib.pyplot as plt
 from typing import Optional, List, Tuple
 from datasets import Dataset, load_dataset
 from langchain.docstore.document import Document as LangchainDocument
