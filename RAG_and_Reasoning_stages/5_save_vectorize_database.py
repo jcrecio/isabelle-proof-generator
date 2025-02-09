@@ -5,7 +5,10 @@ from typing import Optional, List, Tuple
 from datasets import Dataset, load_dataset
 from langchain.docstore.document import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from tqdm.notebook import tqdm
+from langchain.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores.utils import DistanceStrategy
+from tqdm.std import tqdm as tqdm_std
 from transformers import AutoTokenizer
 
 dataset = load_dataset(
@@ -17,7 +20,7 @@ dataset = load_dataset(
 
 RAW_KNOWLEDGE_BASE = [
     LangchainDocument(page_content=doc["content"], metadata={"source": doc["source"]})
-    for doc in tqdm(dataset)
+    for doc in tqdm_std(dataset)
 ]
 
 
@@ -33,7 +36,8 @@ MARKDOWN_SEPARATORS = [
     "",
 ]
 
-EMBEDDING_MODEL_NAME = "jcrecio/risamath-v0.1-merged"
+# jcrecio: choose a different embedding model? which criteria to use? Mathstral? generico?
+EMBEDDING_MODEL_NAME = "jcrecio/risamath-v0.1"
 
 
 def split_documents(
@@ -68,11 +72,26 @@ def split_documents(
 
 
 docs_processed = split_documents(
-    512,
+    795,  # max length of a theory in the dataset
     RAW_KNOWLEDGE_BASE,
     tokenizer_name=EMBEDDING_MODEL_NAME,
 )
 
 
 tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_NAME)
-lengths = [len(tokenizer.encode(doc.page_content)) for doc in tqdm(docs_processed)]
+lengths = [len(tokenizer.encode(doc.page_content)) for doc in tqdm_std(docs_processed)]
+
+#  nearest neighbor search algorithm: FAISS + cosine similarity
+
+embedding_model = HuggingFaceEmbeddings(
+    model_name=EMBEDDING_MODEL_NAME,
+    multi_process=True,
+    model_kwargs={"device": "cuda"},
+    encode_kwargs={"normalize_embeddings": True},  # Set `True` for cosine similarity
+)
+
+KNOWLEDGE_VECTOR_DATABASE = FAISS.from_documents(
+    docs_processed, embedding_model, distance_strategy=DistanceStrategy.COSINE
+)
+
+KNOWLEDGE_VECTOR_DATABASE.save_local("isabelle-hol-vectors")

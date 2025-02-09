@@ -1,7 +1,18 @@
+# {
+#     "Max": 795,
+#     "Min": 2,
+#     "Average": 249.2028355216818,
+#     "Most Repetitive": 305,
+#     "Occurrences": 1875,
+#     "Sum": 68990559,
+#     "Length": 276845,
+#     "Unique Count": 567
+# }
+
 from datasets import load_dataset
 from langchain.docstore.document import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from tqdm.notebook import tqdm
+from tqdm.std import tqdm as tqdm_std
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer
 from collections import Counter
@@ -40,7 +51,7 @@ dataset = load_dataset(
 
 RAW_KNOWLEDGE_BASE = [
     LangchainDocument(page_content=doc["content"], metadata={"source": doc["source"]})
-    for doc in tqdm(dataset)
+    for doc in tqdm_std(dataset)
 ]
 
 
@@ -57,7 +68,7 @@ MARKDOWN_SEPARATORS = [
 ]
 
 text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000,  # The maximum number of characters in a chunk: we selected this value arbitrarily
+    chunk_size=800,  # The maximum number of characters in a chunk: we selected this value arbitrarily
     chunk_overlap=100,  # The number of characters to overlap between chunks
     add_start_index=True,  # If `True`, includes chunk's start index in metadata
     strip_whitespace=True,  # If `True`, strips whitespace from the start and end of every document
@@ -75,7 +86,7 @@ print(
 
 
 tokenizer = AutoTokenizer.from_pretrained("jcrecio/risamath-v0.1-merged")
-lengths = [len(tokenizer.encode(doc.page_content)) for doc in tqdm(docs_processed)]
+lengths = [len(tokenizer.encode(doc.page_content)) for doc in tqdm_std(docs_processed)]
 
 
 stats = get_stats(lengths)
