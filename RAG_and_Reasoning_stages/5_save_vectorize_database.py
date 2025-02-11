@@ -84,7 +84,7 @@ print("*********************************** Loading the embedding model...")
 #  nearest neighbor search algorithm: FAISS + cosine similarity
 embedding_model = HuggingFaceEmbeddings(
     model_name=EMBEDDING_MODEL_NAME,
-    multi_process=True,
+    multi_process=False,
     model_kwargs={"device": "cuda"},
     encode_kwargs={"normalize_embeddings": True},  # Set `True` for cosine similarity
 )
