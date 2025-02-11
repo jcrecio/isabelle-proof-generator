@@ -36,7 +36,7 @@ MARKDOWN_SEPARATORS = [
 ]
 
 # jcrecio: choose a different embedding model? which criteria to use? Mathstral? generico?
-EMBEDDING_MODEL_NAME = "thenlper/gte-large"
+EMBEDDING_MODEL_NAME = "thenlper/gte-small"
 
 
 def split_documents(
@@ -78,16 +78,19 @@ docs_processed = split_documents(
 
 
 tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_NAME)
-lengths = [len(tokenizer.encode(doc.page_content)) for doc in tqdm_std(docs_processed)]
+
+print("*********************************** Loading the embedding model...")
 
 #  nearest neighbor search algorithm: FAISS + cosine similarity
-
 embedding_model = HuggingFaceEmbeddings(
     model_name=EMBEDDING_MODEL_NAME,
     multi_process=True,
     model_kwargs={"device": "cuda"},
     encode_kwargs={"normalize_embeddings": True},  # Set `True` for cosine similarity
 )
+
+print("*********************************** Creating the knowledge vector database...")
+
 
 KNOWLEDGE_VECTOR_DATABASE = FAISS.from_documents(
     docs_processed, embedding_model, distance_strategy=DistanceStrategy.COSINE
