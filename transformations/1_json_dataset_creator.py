@@ -4,6 +4,7 @@ new JSON dataset with triplets: (context, theorem statement, proof)
 """
 
 import os
+import sys
 from utils import read_json_file, write_json_file
 
 
@@ -14,30 +15,50 @@ def find_lemma_index_in_translations(lemma, translations):
     return -1
 
 
-def get_lemma_proof_for_file(extraction_file_path: str):
+def get_lemmas_proofs_for_file(extraction_file_path: str, use_reasoning):
     file_content = read_json_file(extraction_file_path)
     translations = file_content.get("translations")
     if translations is None or len(translations) == 0:
-        return "", ""
+        return []
 
-    lemma = file_content.get("problem_names")[-1]
+    problem_names = file_content.get("problem_names")
+    problem_names_len = len(problem_names)
 
-    last_lemma_index = find_lemma_index_in_translations(lemma, translations)
+    lemmas_with_proofs = []
 
-    theorem_statement = ""
-    proof = ""
+    index = 0
+    lemma = None
 
-    for index in range(0, last_lemma_index):
-        lemma_step = translations[index][1]
-        theorem_statement = f"""{theorem_statement}
-{lemma_step}"""
+    while index < problem_names_len:
+        lemma = problem_names[index]
+        if lemma[0:5] == "lemmas":
+            index += 1
+            continue
 
-    for index in range(last_lemma_index + 1, len(translations)):
-        proof_step = translations[index][1]
-        proof = f"""{proof}
-{proof_step} """
+        current_proof = ""
 
-    return [theorem_statement, proof]
+        next_lemma_translations_index = None
+        if index + 1 < problem_names_len:
+            next_lemma = problem_names[index + 1]
+            next_lemma_translations_index = find_lemma_index_in_translations(
+                next_lemma, translations
+            )
+        if next_lemma_translations_index is None:
+            next_lemma_translations_index = len(translations)
+
+        lemma_index = find_lemma_index_in_translations(lemma, translations)
+        for i in range(lemma_index + 1, next_lemma_translations_index):
+            if use_reasoning:
+                current_proof = (
+                    f"{current_proof} {translations[i][0]} {translations[i][1]}".strip()
+                )
+            else:
+                current_proof = f"{current_proof} {translations[i][1]}".strip()
+
+        lemmas_with_proofs.append((lemma, current_proof))
+        index += 1
+
+    return lemmas_with_proofs
 
 
 def read_abstract_from_tex_file(file_path: str):
@@ -51,7 +72,7 @@ def read_abstract_from_tex_file(file_path: str):
             start_index += len(start_tag)
             return content[start_index:end_index].strip()
 
-    return "NO_CONTEXT"
+    return "NO CONTEXT"
 
 
 def get_problem_context(afp_folder):
@@ -63,30 +84,35 @@ def get_problem_context(afp_folder):
     if os.path.exists(root_tex_path):
         return read_abstract_from_tex_file(root_tex_path)
 
-    return "NO_CONTEXT"
+    return "NO CONTEXT"
 
 
-def get_dataset_items(afp_folder: str, extraction_folder_path: str, with_context: bool):
+def get_dataset_items(
+    afp_folder: str, extraction_folder_path: str, use_context, use_reasoning
+):
     proofs = []
     for file_name in os.listdir(extraction_folder_path):
         if not file_name.endswith(".json"):
             continue
 
-        context = "NO_CONTEXT"
-        if with_context == "True":
+        if use_context:
             context = get_problem_context(afp_folder)
 
         file_path = os.path.join(extraction_folder_path, file_name)
         if os.path.isfile(file_path):
-            [theorem_statement, proof] = get_lemma_proof_for_file(file_path)
-            if theorem_statement != "" and proof != "":
-                proofs.append(
-                    {
-                        "context": context,
+            lemmas_and_proofs = get_lemmas_proofs_for_file(file_path, use_reasoning)
+            if len(lemmas_and_proofs) == 0:
+                continue
+
+            for theorem_statement, proof in lemmas_and_proofs:
+                if theorem_statement != "" and proof != "":
+                    training_item = {
                         "theorem_statement": theorem_statement,
                         "proof": proof,
                     }
-                )
+                    if use_context:
+                        training_item["context"] = context
+                    proofs.append(training_item)
 
     return proofs
 
@@ -96,12 +122,20 @@ afp_folder = os.getenv("AFP_FOLDER")
 output_file = os.getenv("OUTPUT_FILE_DATASET")
 with_context = os.getenv("WITH_CONTEXT")
 
+use_context = (len(sys.argv) > 1 and sys.argv[1] == "context") or (
+    len(sys.argv) > 2 and sys.argv[2] == "context"
+)
+use_reasoning = (len(sys.argv) > 1 and sys.argv[1] == "reasoning") or (
+    len(sys.argv) > 2 and sys.argv[2] == "reasoning"
+)
+
 proofs = []
 for item in os.listdir(problems_folder):
     proofs = proofs + get_dataset_items(
         os.path.join(afp_folder, str(item)),
         os.path.join(problems_folder, str(item)),
-        with_context,
+        use_context,
+        use_reasoning,
     )
 
 write_json_file(output_file, {"proofs": proofs})

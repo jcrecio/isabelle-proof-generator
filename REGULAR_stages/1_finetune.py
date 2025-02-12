@@ -48,11 +48,6 @@ dataset_name = os.getenv("DATASET")
 wandb_token = os.getenv("WANDB_TOKEN")
 train_file = os.getenv("TRAINING_FILE")
 
-dataset = load_dataset(dataset_name, data_files={"train": train_file}, split="train")
-dataset_dict = dataset.train_test_split(test_size=0.1, seed=42)
-train_dataset = dataset_dict["train"]
-eval_dataset = dataset_dict["test"]
-
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_quant_type="nf4",
@@ -72,6 +67,29 @@ tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.add_eos_token = True
 tokenizer.add_bos_token, tokenizer.add_eos_token
+
+PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT = 'You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.[INST]Given the problem context "{}". Infer a proof for the following Isabelle/HOL theorem statement/s: {}[/INST]{}'
+PROMPT_TEMPLATE_QUESTION_ANSWER = "You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.[INST]Infer a proof for the following Isabelle/HOL theorem statement/s: {}[/INST]{}"
+
+EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
+
+
+def formatting_prompts_func(examples):
+    contexts = examples["context"]
+    theorem_statements = examples["theorem_statement"]
+    proofs = examples["proof"]
+    texts = []
+    for context, theorem_statement, proof in zip(contexts, theorem_statements, proofs):
+        text = (
+            PROMPT_TEMPLATE_QUESTION_ANSWER_WITH_CONTEXT.format(
+                context, theorem_statement, proof
+            )
+            + EOS_TOKEN
+        )
+        texts.append(text)
+    return {
+        "text": texts,
+    }
 
 
 def get_current_timestamp():
@@ -121,6 +139,11 @@ training_arguments = TrainingArguments(
     eval_strategy="steps",
     eval_steps=config["eval_steps"],
 )
+
+dataset = load_dataset(dataset_name, data_files={"train": train_file}, split="train")
+dataset_dict = dataset.train_test_split(test_size=0.1, seed=42)
+train_dataset = dataset_dict["train"]
+eval_dataset = dataset_dict["test"]
 
 trainer = SFTTrainer(
     model=model,

@@ -28,7 +28,7 @@ KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
 
 # Load the LLM reader
 
-model_name = "jcrecio/risamath-v0.1"
+model_name = "jcrecio/Remath-v0.1"
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name,
     max_seq_length=4096,  # Set max sequence length

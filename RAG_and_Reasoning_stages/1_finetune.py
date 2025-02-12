@@ -14,7 +14,7 @@ login(hf_token)
 
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project="risamath-v0.1",
+    project="Remath-v0.1",
     job_type="training",
     anonymous="allow",
 )
@@ -55,8 +55,6 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 {}"""
 
 
-question = "Prove that the square root of 2 is irrational."
-
 EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
 
 
@@ -81,7 +79,7 @@ def formatting_prompts_func(examples):
 
 dataset = load_dataset(
     "jcrecio/AFP_Theories",
-    data_files="afp_extractions_thinking.jsonl",
+    data_files="afp_extractions_reasoning.jsonl",
     split="train",
     trust_remote_code=True,
 )
