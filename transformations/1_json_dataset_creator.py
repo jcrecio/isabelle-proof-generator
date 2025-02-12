@@ -36,6 +36,7 @@ def get_lemmas_proofs_for_file(extraction_file_path: str, use_reasoning):
             continue
 
         current_proof = ""
+        current_reasoning = ""
 
         next_lemma_translations_index = None
         if index + 1 < problem_names_len:
@@ -49,13 +50,12 @@ def get_lemmas_proofs_for_file(extraction_file_path: str, use_reasoning):
         lemma_index = find_lemma_index_in_translations(lemma, translations)
         for i in range(lemma_index + 1, next_lemma_translations_index):
             if use_reasoning:
-                current_proof = (
+                current_reasoning = (
                     f"{current_proof} {translations[i][0]} {translations[i][1]}".strip()
                 )
-            else:
                 current_proof = f"{current_proof} {translations[i][1]}".strip()
 
-        lemmas_with_proofs.append((lemma, current_proof))
+        lemmas_with_proofs.append((lemma, current_proof, current_reasoning))
         index += 1
 
     return lemmas_with_proofs
@@ -104,7 +104,7 @@ def get_dataset_items(
             if len(lemmas_and_proofs) == 0:
                 continue
 
-            for theorem_statement, proof in lemmas_and_proofs:
+            for theorem_statement, proof, reasoning in lemmas_and_proofs:
                 if theorem_statement != "" and proof != "":
                     training_item = {
                         "theorem_statement": theorem_statement,
@@ -112,6 +112,8 @@ def get_dataset_items(
                     }
                     if use_context:
                         training_item["context"] = context
+                    if use_reasoning:
+                        training_item["reasoning"] = reasoning
                     proofs.append(training_item)
 
     return proofs
