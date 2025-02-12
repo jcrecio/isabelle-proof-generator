@@ -61,7 +61,7 @@ EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
 def formatting_prompts_func(examples):
     contexts = examples["context"]
     theorem_statements = examples["theorem_statement"]
-    thinks = examples["think"]
+    thinks = examples["reasoning"]
     proofs = examples["proof"]
     texts = []
     for context, theorem_statement, think, proof in zip(
