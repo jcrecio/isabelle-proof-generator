@@ -5,6 +5,9 @@ from datasets import load_dataset
 from unsloth import is_bfloat16_supported, FastLanguageModel
 from trl import SFTTrainer
 from transformers import TrainingArguments
+from dotenv import load_dotenv
+
+load_dotenv()
 
 wandb_token = os.getenv("WANDB_TOKEN")
 
