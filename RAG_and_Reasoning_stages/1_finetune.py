@@ -18,7 +18,7 @@ new_model_local = (
 )
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project="jcrecio/Remath-v0.1c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.1",
+    project="Remath-v0.1-c" if WITH_CONTEXT == "True" else "Remath-v0.1",
     job_type="training",
     anonymous="allow",
 )

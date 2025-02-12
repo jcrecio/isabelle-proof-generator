@@ -118,9 +118,7 @@ def get_current_timestamp():
 
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project=(
-        "jcrecio/Isamath-v0.1c" if WITH_CONTEXT == "True" else "jcrecio/Isamath-v0.1"
-    ),
+    project=("Isamath-v0.1-c" if WITH_CONTEXT == "True" else "Isamath-v0.1"),
     job_type="training",
     anonymous="allow",
 )
