@@ -34,7 +34,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     token=hf_token,
 )
 
-train_prompt_style_with = """Below is an instruction that describes a task, paired with an input that provides further context.
+train_prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
 Write a response that appropriately completes the request.
 Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
 
@@ -101,10 +101,7 @@ def formatting_prompts_func(examples):
     proofs = examples["proof"]
     texts = []
     for theorem_statement, think, proof in zip(theorem_statements, thinks, proofs):
-        text = (
-            train_prompt_style_with_context.format(theorem_statement, think, proof)
-            + EOS_TOKEN
-        )
+        text = train_prompt_style.format(theorem_statement, think, proof) + EOS_TOKEN
         texts.append(text)
     return {
         "text": texts,
