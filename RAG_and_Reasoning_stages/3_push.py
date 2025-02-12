@@ -12,7 +12,7 @@ login(hf_token)
 
 base_model_path = "unsloth/DeepSeek-R1-Distill-Llama-8B"
 lora_model_path = (
-    "jcrecio/Remath-v0.1-c if WITH_CONTEXT == 'True' else jcrecio/Remath-v0.1"
+    "jcrecio/Remath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.1"
 )
 
 base_model, tokenizer = FastLanguageModel.from_pretrained(
