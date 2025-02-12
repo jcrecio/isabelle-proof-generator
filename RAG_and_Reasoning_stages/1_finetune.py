@@ -13,9 +13,12 @@ login(hf_token)
 
 WITH_CONTEXT = os.getenv("WITH_CONTEXT")
 
+new_model_local = (
+    "jcrecio/Remath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.1"
+)
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project="Remath-v0.1",
+    project=new_model_local,
     job_type="training",
     anonymous="allow",
 )
@@ -179,9 +182,6 @@ trainer = SFTTrainer(
 
 trainer_stats = trainer.train()
 
-new_model_local = (
-    "jcrecio/Remath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.1"
-)
 model.save_pretrained(new_model_local)
 tokenizer.save_pretrained(new_model_local)
 
