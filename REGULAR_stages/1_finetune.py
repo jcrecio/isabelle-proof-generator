@@ -43,10 +43,9 @@ load_dotenv()
 
 config = read_config(os.getenv("FINETUNE_CONFIG_FILE"))
 base_model = os.getenv("MODEL_TO_USE")
-new_model = os.getenv("NEW_MODEL")
-dataset_name = os.getenv("DATASET")
 wandb_token = os.getenv("WANDB_TOKEN")
 train_file = os.getenv("TRAINING_FILE")
+WITH_CONTEXT = os.getenv("WITH_CONTEXT")
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -74,7 +73,7 @@ PROMPT_TEMPLATE_QUESTION_ANSWER = "You are now an specialized agent to infer pro
 EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
 
 
-def formatting_prompts_func(examples):
+def formatting_prompts_func_with_context(examples):
     contexts = examples["context"]
     theorem_statements = examples["theorem_statement"]
     proofs = examples["proof"]
@@ -90,6 +89,27 @@ def formatting_prompts_func(examples):
     return {
         "text": texts,
     }
+
+
+def formatting_prompts_func(examples):
+    theorem_statements = examples["theorem_statement"]
+    proofs = examples["proof"]
+    texts = []
+    for theorem_statement, proof in zip(theorem_statements, proofs):
+        text = (
+            PROMPT_TEMPLATE_QUESTION_ANSWER.format(theorem_statement, proof) + EOS_TOKEN
+        )
+        texts.append(text)
+    return {
+        "text": texts,
+    }
+
+
+formatter = (
+    formatting_prompts_func_with_context
+    if WITH_CONTEXT == "True"
+    else formatting_prompts_func
+)
 
 
 def get_current_timestamp():
@@ -140,7 +160,14 @@ training_arguments = TrainingArguments(
     eval_steps=config["eval_steps"],
 )
 
-dataset = load_dataset(dataset_name, data_files={"train": train_file}, split="train")
+DATASET_FILE = (
+    "afp_extractions_context.jsonl"
+    if WITH_CONTEXT == "True"
+    else "afp_extractions.jsonl"
+)
+dataset = load_dataset(
+    "jcrecio/AFP_Theories", data_files={"train": train_file}, split="train"
+)
 dataset_dict = dataset.train_test_split(test_size=0.1, seed=42)
 train_dataset = dataset_dict["train"]
 eval_dataset = dataset_dict["test"]
@@ -159,7 +186,9 @@ trainer = SFTTrainer(
 
 trainer.train()
 
-trainer.model.save_pretrained(new_model)
+trainer.model.save_pretrained(
+    "jcrecio/isamath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/isamath-v0.1"
+)
 wandb.finish()
 model.config.use_cache = True
 model.eval()

@@ -108,23 +108,27 @@ def formatting_prompts_func(examples):
     }
 
 
+DATASET_FILE = (
+    "afp_extractions_context_reasoning.jsonl"
+    if WITH_CONTEXT == "True"
+    else "afp_extractions_reasoning.jsonl"
+)
+
 dataset = load_dataset(
     "jcrecio/AFP_Theories",
-    data_files="afp_extractions_reasoning.jsonl",
+    data_files=DATASET_FILE,
     split="train",
     trust_remote_code=True,
 )
 formatter = (
-    WITH_CONTEXT == "True"
-    and formatting_prompts_func_with_context
-    or formatting_prompts_func
+    formatting_prompts_func_with_context
+    if WITH_CONTEXT == "True"
+    else formatting_prompts_func
 )
 dataset = dataset.map(
     formatter,
     batched=True,
 )
-dataset["text"][0]
-
 
 model = FastLanguageModel.get_peft_model(
     model,
@@ -175,7 +179,9 @@ trainer = SFTTrainer(
 
 trainer_stats = trainer.train()
 
-new_model_local = "jcrecio/Remath-v0.1"
+new_model_local = (
+    "jcrecio/Remath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.1"
+)
 model.save_pretrained(new_model_local)
 tokenizer.save_pretrained(new_model_local)
 
