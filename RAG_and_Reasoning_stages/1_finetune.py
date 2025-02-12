@@ -11,6 +11,7 @@ wandb_token = os.getenv("WANDB_TOKEN")
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
+WITH_CONTEXT = os.getenv("WITH_CONTEXT")
 
 wandb.login(key=wandb_token)
 run = wandb.init(
@@ -33,8 +34,23 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     token=hf_token,
 )
 
+train_prompt_style_with = """Below is an instruction that describes a task, paired with an input that provides further context.
+Write a response that appropriately completes the request.
+Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
 
-train_prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
+### Instruction:
+You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
+Infer a proof for the following Isabelle/HOL theorem statement.
+
+### Theorem statement:
+{}
+
+### Proof:
+<think>
+{}
+</think>
+{}"""
+train_prompt_style_with_context = """Below is an instruction that describes a task, paired with an input that provides further context.
 Write a response that appropriately completes the request.
 Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
 
@@ -58,7 +74,7 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
 
 
-def formatting_prompts_func(examples):
+def formatting_prompts_func_with_context(examples):
     contexts = examples["context"]
     theorem_statements = examples["theorem_statement"]
     thinks = examples["reasoning"]
@@ -68,7 +84,25 @@ def formatting_prompts_func(examples):
         contexts, theorem_statements, thinks, proofs
     ):
         text = (
-            train_prompt_style.format(context, theorem_statement, think, proof)
+            train_prompt_style_with_context.format(
+                context, theorem_statement, think, proof
+            )
+            + EOS_TOKEN
+        )
+        texts.append(text)
+    return {
+        "text": texts,
+    }
+
+
+def formatting_prompts_func(examples):
+    theorem_statements = examples["theorem_statement"]
+    thinks = examples["reasoning"]
+    proofs = examples["proof"]
+    texts = []
+    for theorem_statement, think, proof in zip(theorem_statements, thinks, proofs):
+        text = (
+            train_prompt_style_with_context.format(theorem_statement, think, proof)
             + EOS_TOKEN
         )
         texts.append(text)
@@ -83,8 +117,13 @@ dataset = load_dataset(
     split="train",
     trust_remote_code=True,
 )
+formatter = (
+    WITH_CONTEXT == "True"
+    and formatting_prompts_func_with_context
+    or formatting_prompts_func
+)
 dataset = dataset.map(
-    formatting_prompts_func,
+    formatter,
     batched=True,
 )
 dataset["text"][0]
@@ -139,7 +178,7 @@ trainer = SFTTrainer(
 
 trainer_stats = trainer.train()
 
-new_model_local = "jcrecio/risamath-v0.1"
+new_model_local = "jcrecio/Remath-v0.1"
 model.save_pretrained(new_model_local)
 tokenizer.save_pretrained(new_model_local)
 
