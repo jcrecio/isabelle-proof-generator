@@ -118,7 +118,9 @@ def get_current_timestamp():
 
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project=f"{get_current_timestamp()} Mathstral 7B => FINETUNE",
+    project=(
+        "jcrecio/Isamath-v0.1c" if WITH_CONTEXT == "True" else "jcrecio/Isamath-v0.1"
+    ),
     job_type="training",
     anonymous="allow",
 )
@@ -187,7 +189,7 @@ trainer = SFTTrainer(
 trainer.train()
 
 trainer.model.save_pretrained(
-    "jcrecio/isamath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/isamath-v0.1"
+    "jcrecio/Isamath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/Isamath-v0.1"
 )
 wandb.finish()
 model.config.use_cache = True
