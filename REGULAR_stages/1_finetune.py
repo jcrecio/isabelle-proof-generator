@@ -168,6 +168,16 @@ DATASET_FILE = (
 dataset = load_dataset(
     "jcrecio/AFP_Theories", data_files={"train": DATASET_FILE}, split="train"
 )
+formatter = (
+    formatting_prompts_func_with_context
+    if WITH_CONTEXT == "True"
+    else formatting_prompts_func
+)
+dataset = dataset.map(
+    formatter,
+    batched=True,
+)
+
 dataset_dict = dataset.train_test_split(test_size=0.1, seed=42)
 train_dataset = dataset_dict["train"]
 eval_dataset = dataset_dict["test"]
