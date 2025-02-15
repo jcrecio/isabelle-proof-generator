@@ -486,7 +486,7 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 <think>{}"""
 
 
-def infer_proof(theorem_statement, device):
+def infer_proof(theorem_statement, device="cuda"):
     if WITH_RAG:
         load_rag()
         inputs = tokenizer(
@@ -518,7 +518,7 @@ def infer_proof(theorem_statement, device):
         return response
 
 
-def infer_proof_with_context(context, theorem_statement, device):
+def infer_proof_with_context(context, theorem_statement, device="cuda"):
     inputs = tokenizer(
         [prompt_style_with_context.format(context, theorem_statement, "")],
         return_tensors="pt",
