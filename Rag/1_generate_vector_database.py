@@ -10,19 +10,21 @@ from langchain_community.vectorstores.utils import DistanceStrategy
 from tqdm.std import tqdm as tqdm_std
 from transformers import AutoTokenizer
 
+SPLIT_DOCUMENTS = False
+
 dataset = load_dataset(
     "jcrecio/AFP_Theories",
-    data_files="rag_database.jsonl",
+    data_files="rag_predocuments.jsonl",
     split="train",
     trust_remote_code=True,
 )
 
 RAW_KNOWLEDGE_BASE = [
-    LangchainDocument(page_content=doc["content"], metadata={"source": doc["source"]})
+    LangchainDocument(page_content=doc["proof"], metadata={"source": doc["source"]})
     for doc in tqdm_std(dataset)
 ]
 
-
+# work on better separators for isabelle theorems lemmas and proofs
 MARKDOWN_SEPARATORS = [
     "\n#{1,6} ",
     "```\n",
@@ -70,10 +72,14 @@ def split_documents(
     return docs_processed_unique
 
 
-docs_processed = split_documents(
-    795,  # max length of a theory in the dataset
-    RAW_KNOWLEDGE_BASE,
-    tokenizer_name=EMBEDDING_MODEL_NAME,
+docs_processed = (
+    split_documents(
+        300,
+        RAW_KNOWLEDGE_BASE,
+        tokenizer_name=EMBEDDING_MODEL_NAME,
+    )
+    if SPLIT_DOCUMENTS
+    else RAW_KNOWLEDGE_BASE
 )
 
 
