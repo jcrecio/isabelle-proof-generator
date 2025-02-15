@@ -6,6 +6,7 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 from timeit import Timer
 from typing import Any, List, Optional, TextIO
 from pathlib import Path
@@ -225,22 +226,62 @@ def infer_proof(lemma):
     return ""
 
 
-def replace_lemma_proof(content: str, start_line: str, new_proof: str) -> str:
-    lines = content.split("\n")
+def find_text_and_next_line(content, search_text):
+    start_pos = content.find(search_text)
+    if start_pos == -1:
+        return None
 
+    end_pos = start_pos + len(search_text)
+
+    next_line_start = content.find("\n", end_pos) + 1
+    if next_line_start == 0:
+        return None
+
+    next_line_end = content.find("\n", next_line_start)
+    if next_line_end == -1:
+        next_line_end = len(content)
+
+    return next_line_start
+
+
+def duplicate_lemma_new_proof(content: str, current_lemma: str, new_proof: str) -> str:
+    lines = [line.strip() for line in content.split("\n")]
+
+    start_idx = -1
     try:
-        start_idx = lines.index(start_line)
+        start_idx = lines.index(current_lemma)
     except ValueError:
-        raise ValueError(f"Start line '{start_line}' not found in content")
+        # not finding it directly then try to find in the whole file content
+        # raise ValueError(f"Start line '{start_line}' not found in content")
+        start_idx = find_text_and_next_line(content, current_lemma)
+    start_idx = start_idx - 1
+    lines.insert(start_idx, f"lemma {str(uuid.uuid4())} {current_lemma[5:]}")
+    lines.insert(start_idx + 1, f"{new_proof}")
+    return "\n".join(lines)
+
+
+def replace_lemma_proof(
+    content: str, current_lemma: str, next_lemma: str, new_proof: str
+) -> str:
+    """there is a bug in this method"""
+    lines = [line.strip() for line in content.split("\n")]
+
+    start_idx = -1
+    try:
+        start_idx = lines.index(current_lemma)
+    except ValueError:
+        # not finding it directly then try to find in the whole file content
+        # raise ValueError(f"Start line '{start_line}' not found in content")
+        start_idx = find_text_and_next_line(content, current_lemma)
 
     proof_idx = None
     for i in range(start_idx + 1, len(lines)):
-        if "proof" in lines[i]:
+        if next_lemma == lines[i]:
             proof_idx = i
             break
 
     if proof_idx is None:
-        raise ValueError("No 'proof' keyword found after the specified start line")
+        duplicate_lemma_new_proof(content, current_lemma, new_proof)
 
     result_lines = lines[: start_idx + 1] + [new_proof] + lines[proof_idx:]
 
@@ -278,6 +319,26 @@ def create_text_file(filename, content):
         return False
 
 
+def extract_theory_name(extractions_file_name, prefix=None):
+    try:
+        parts = extractions_file_name.split("_ground_truth")
+        if len(parts) != 2:
+            return None
+
+        pre_ground = parts[0]
+
+        if prefix:
+            if prefix not in pre_ground:
+                return None
+            result = pre_ground.split(prefix)[-1]
+            return result.lstrip("_")
+        else:
+            return pre_ground.split("_")[-1]
+
+    except Exception as _:
+        return None
+
+
 """
     afp_extractions_folder: Folder with the PISA dataset with all the lemmas separated
     afp_extractions_original: Folder with the original theories from AFP
@@ -291,33 +352,43 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
         session_name = session.split("/")[-1]
         theory_files = get_files_in_folder(session)
         for theory_file in theory_files:
-            theory_name = theory_file.split("/")[-1].replace(".thy", "")
-            theory_original = f"{afp_extractions_original}/{theory_name}.thy"
+            theory_name = extract_theory_name(
+                theory_file.split("/")[-1], session.split("/")[-1]
+            )
+            original_theory_file = (
+                f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
+            )
 
-            if not os.path.exists(theory_original):
-                log(f"Original theory not found: {theory_original}")
+            if not os.path.exists(original_theory_file):
+                log(f"Original theory not found: {original_theory_file}")
             else:
                 log(f"Processing theory: {theory_file}")
                 log("\n")
 
                 lemmas_and_proofs = get_lemmas_proofs_for_file(theory_file)
-                for lemma, ground_proof in lemmas_and_proofs:
+                for lemma_index, (lemma, ground_proof) in enumerate(lemmas_and_proofs):
                     log(f"Processing lemma: {lemma}")
-                    original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_file}.thy"
-                    backup_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_file}.thy"
-                    shutil.copy(theory_file, backup_theory_file)
 
-                    generated_proof = infer_proof(lemma)
-                    theory_content = read_file(theory_file)
-                    line_num, line_content = find_string_in_file(
-                        backup_theory_file, lemma
+                    original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
+                    backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
+                    theory_content = read_file(original_theory_file)
+                    _ = shutil.move(original_theory_file, backup_original_theory_file)
+                    generated_proof = "AAAAAAAAAA"  # infer_proof(lemma)
+
+                    new_theory_content = theory_content.replace(
+                        ground_proof, generated_proof
                     )
+                    next_lemma = None
+                    if (lemma_index + 1) < len(lemmas_and_proofs):
+                        next_lemma = lemmas_and_proofs[lemma_index + 1][0]
                     new_theory_content = replace_lemma_proof(
-                        theory_content, line_num, generated_proof
+                        theory_content, lemma, next_lemma, generated_proof
                     )
                     create_text_file(original_theory_file, new_theory_content)
 
-                    result = verify_isabelle_session(session)
+                    result = verify_isabelle_session(
+                        f"{afp_extractions_original}/thys/{session_name}"
+                    )
                 if result[0] == "error":
                     log(f"Error details: {result[1]}", file=sys.stderr)
 
@@ -329,5 +400,5 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 if __name__ == "__main__":
     verify_all_sessions(
         "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp_extractions/afp_extractions",
-        "isabelle-proof-generator/afp-current-extractions",
+        "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions",
     )
