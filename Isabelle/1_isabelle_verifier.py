@@ -444,10 +444,10 @@ EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
 # Load the LLM reader
-model_name = "jcrecio/Remath-v0.1"
+model_name = sys.argv[1] or "jcrecio/Remath-v0.1"
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name,
-    max_seq_length=4096,  # Set max sequence length
+    max_seq_length=4096,
     dtype=None,  # Uses bfloat16 if available, else float16
     load_in_4bit=True,  # Enable 4-bit quantization
 )
@@ -534,8 +534,7 @@ def infer_proof_with_context(context, theorem_statement, device="cuda"):
     return response
 
 
-if __name__ == "__main__":
-    verify_all_sessions(
-        "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp_extractions/afp_extractions",
-        "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions",
-    )
+verify_all_sessions(
+    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp_extractions/afp_extractions",
+    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions",
+)
