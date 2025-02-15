@@ -19,13 +19,16 @@ from datasets import Dataset, load_dataset
 from langchain.docstore.document import Document as LangchainDocument
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
+from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores.utils import DistanceStrategy
 from tqdm.std import tqdm as tqdm_std
 from transformers import AutoTokenizer
 from transformers import pipeline
 from unsloth import FastLanguageModel
+from huggingface_hub import hf_hub_download
 
+import pickle
 
 VERBOSE = True
 ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
@@ -353,10 +356,24 @@ def extract_theory_name(extractions_file_name, prefix=None):
         return None
 
 
-"""
-    afp_extractions_folder: Folder with the PISA dataset with all the lemmas separated
-    afp_extractions_original: Folder with the original theories from AFP
-"""
+KNOWLEDGE_VECTOR_DATABASE = None
+embedding_model = None
+
+
+def load_rag():
+    repo_id = "jcrecio/afp_rag"
+
+    faiss_path = hf_hub_download(repo_id=repo_id, filename="index.faiss")
+    pkl_path = hf_hub_download(repo_id=repo_id, filename="index.pkl")
+
+    with open(pkl_path, "rb") as f:
+        index_metadata = pickle.load(f)
+
+    embedding_model = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+    # KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
+    KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local(faiss_path, embedding_model)
 
 
 def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
@@ -423,21 +440,10 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 WITH_CONTEXT = False
 WITH_RAG = False
 
-# EMBEDDING_MODEL_NAME = "jcrecio/risamath-v0.1"
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
-# Load the knowledge vector database
-
-embedding_model = HuggingFaceEmbeddings(
-    model_name=EMBEDDING_MODEL_NAME,
-    multi_process=True,
-    model_kwargs={"device": "cuda"},
-    encode_kwargs={"normalize_embeddings": True},  # Set `True` for cosine similarity
-)
-KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
 
 # Load the LLM reader
-
 model_name = "jcrecio/Remath-v0.1"
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name,
@@ -481,19 +487,35 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 
 
 def infer_proof(theorem_statement, device):
-    inputs = tokenizer(
-        [prompt_style.format(theorem_statement, "")],
-        return_tensors="pt",
-    ).to(device)
+    if WITH_RAG:
+        load_rag()
+        inputs = tokenizer(
+            [prompt_style.format(theorem_statement, "")],
+            return_tensors="pt",
+        ).to(device)
 
-    outputs = model.generate(
-        input_ids=inputs.input_ids,
-        attention_mask=inputs.attention_mask,
-        max_new_tokens=4096,
-        use_cache=True,
-    )
-    response = tokenizer.batch_decode(outputs)
-    return response
+        outputs = model.generate(
+            input_ids=inputs.input_ids,
+            attention_mask=inputs.attention_mask,
+            max_new_tokens=4096,
+            use_cache=True,
+        )
+        response = tokenizer.batch_decode(outputs)
+        return response
+    else:
+        inputs = tokenizer(
+            [prompt_style.format(theorem_statement, "")],
+            return_tensors="pt",
+        ).to(device)
+
+        outputs = model.generate(
+            input_ids=inputs.input_ids,
+            attention_mask=inputs.attention_mask,
+            max_new_tokens=4096,
+            use_cache=True,
+        )
+        response = tokenizer.batch_decode(outputs)
+        return response
 
 
 def infer_proof_with_context(context, theorem_statement, device):
