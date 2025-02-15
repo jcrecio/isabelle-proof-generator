@@ -285,7 +285,7 @@ def replace_lemma_proof(
         # raise ValueError(f"Start line '{start_line}' not found in content")
         start_idx = find_text_and_next_line(content, current_lemma)
 
-    if start_idx == None:
+    if start_idx is None:
         return None
 
     proof_idx = None

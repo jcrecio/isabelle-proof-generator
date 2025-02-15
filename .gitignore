@@ -1,5 +1,14 @@
 **/__pycache__
 .vscode
 afp-current
+afp-current-extractions
+__afp-current-extractions
 afp-extractions
+afp_extractions
+afp-current/**
+afp-current-extractions/**
+afp-current-extractions**
+afp-current-extractions copy
+afp-extractions/**
+afp_extractions/**
 venv_isabelle
