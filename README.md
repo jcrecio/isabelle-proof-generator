@@ -174,3 +174,11 @@ pip install -q -U git+https://github.com/huggingface/accelerate.git
 pip install -q trl xformers wandb datasets einops sentencepiece
 pip install python-dotenv
 ```
+## 5. Verifying proofs
+Make sure you have installed Isabelle, you can download it from the AFP page and add it to the PATH
+Also install all the dependencies (maybe also Nominal2)
+```
+isabelle components -a
+isabelle build -a
+isabelle build -b Nominal2
+```

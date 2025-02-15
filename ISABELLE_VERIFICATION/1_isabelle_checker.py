@@ -11,6 +11,21 @@ from timeit import Timer
 from typing import Any, List, Optional, TextIO
 from pathlib import Path
 from datetime import datetime
+import sys
+import datasets
+import pandas as pd
+from typing import Optional, List, Tuple
+from datasets import Dataset, load_dataset
+from langchain.docstore.document import Document as LangchainDocument
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores.utils import DistanceStrategy
+from tqdm.std import tqdm as tqdm_std
+from transformers import AutoTokenizer
+from transformers import pipeline
+from unsloth import FastLanguageModel
+
 
 VERBOSE = True
 ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
@@ -162,7 +177,7 @@ def process_root_file(file_path: str) -> List[str]:
     return extract_theories_files(content)
 
 
-def verify_isabelle_session(project_folder: str) -> bool:
+def verify_isabelle_session(project_folder: str):
     command_string = f"{ISABELLE_COMMAND} {project_folder}"
     command = convert_to_shell_command(command_string)
 
@@ -170,8 +185,8 @@ def verify_isabelle_session(project_folder: str) -> bool:
     log(f"Verifying Isabelle project... {project_folder.split('/')[-1]}")
     output = run_command_with_output(command)
     if "error" in output[1]:
-        return ["error", output[1]]
-    return ["success", output[1]]
+        return [False, output[1]]
+    return [True, output[1]]
 
 
 def find_lemma_index_in_translations(lemma, translations):
@@ -222,10 +237,6 @@ def get_lemmas_proofs_for_file(extraction_file_path: str):
     return lemmas_with_proofs
 
 
-def infer_proof(lemma):
-    return ""
-
-
 def find_text_and_next_line(content, search_text):
     start_pos = content.find(search_text)
     if start_pos == -1:
@@ -273,6 +284,9 @@ def replace_lemma_proof(
         # not finding it directly then try to find in the whole file content
         # raise ValueError(f"Start line '{start_line}' not found in content")
         start_idx = find_text_and_next_line(content, current_lemma)
+
+    if start_idx == None:
+        return None
 
     proof_idx = None
     for i in range(start_idx + 1, len(lines)):
@@ -348,6 +362,9 @@ def extract_theory_name(extractions_file_name, prefix=None):
 def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
     sessions = get_subfolders(afp_extractions_folder)
 
+    successes = 0
+    failures = 0
+
     for session in sessions:
         session_name = session.split("/")[-1]
         theory_files = get_files_in_folder(session)
@@ -372,8 +389,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                     backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
                     theory_content = read_file(original_theory_file)
-                    _ = shutil.move(original_theory_file, backup_original_theory_file)
-                    generated_proof = "AAAAAAAAAA"  # infer_proof(lemma)
+                    generated_proof = infer_proof(lemma)
 
                     new_theory_content = theory_content.replace(
                         ground_proof, generated_proof
@@ -384,17 +400,116 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     new_theory_content = replace_lemma_proof(
                         theory_content, lemma, next_lemma, generated_proof
                     )
+                    if new_theory_content is None:
+                        continue
+
+                    _ = shutil.move(original_theory_file, backup_original_theory_file)
                     create_text_file(original_theory_file, new_theory_content)
 
                     result = verify_isabelle_session(
                         f"{afp_extractions_original}/thys/{session_name}"
                     )
-                if result[0] == "error":
+                if result[0] is False:
+                    failures += 1
                     log(f"Error details: {result[1]}", file=sys.stderr)
+                else:
+                    successes += 1
 
         result = verify_isabelle_session(session)
         if result[0] == "error":
             log(f"Error details: {result[1]}", file=sys.stderr)
+
+
+WITH_CONTEXT = False
+WITH_RAG = False
+
+# EMBEDDING_MODEL_NAME = "jcrecio/risamath-v0.1"
+EMBEDDING_MODEL_NAME = "thenlper/gte-large"
+
+# Load the knowledge vector database
+
+embedding_model = HuggingFaceEmbeddings(
+    model_name=EMBEDDING_MODEL_NAME,
+    multi_process=True,
+    model_kwargs={"device": "cuda"},
+    encode_kwargs={"normalize_embeddings": True},  # Set `True` for cosine similarity
+)
+KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
+
+# Load the LLM reader
+
+model_name = "jcrecio/Remath-v0.1"
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name,
+    max_seq_length=4096,  # Set max sequence length
+    dtype=None,  # Uses bfloat16 if available, else float16
+    load_in_4bit=True,  # Enable 4-bit quantization
+)
+
+
+prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
+Write a response that appropriately completes the request.
+Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
+
+### Instruction:
+You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
+Infer a proof for the following Isabelle/HOL theorem statement.
+
+### Theorem statement:
+{}
+
+### Proof:
+<think>{}"""
+
+
+prompt_style_with_context = """Below is an instruction that describes a task, paired with an input that provides further context.
+Write a response that appropriately completes the request.
+Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
+
+### Instruction:
+You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
+Infer a proof for the following Isabelle/HOL theorem statement.
+
+### Context:
+{}
+
+### Theorem statement:
+{}
+
+### Proof:
+<think>{}"""
+
+
+def infer_proof(theorem_statement, device):
+    inputs = tokenizer(
+        [prompt_style.format(theorem_statement, "")],
+        return_tensors="pt",
+    ).to(device)
+
+    outputs = model.generate(
+        input_ids=inputs.input_ids,
+        attention_mask=inputs.attention_mask,
+        max_new_tokens=4096,
+        use_cache=True,
+    )
+    response = tokenizer.batch_decode(outputs)
+    return response
+
+
+def infer_proof_with_context(context, theorem_statement, device):
+    inputs = tokenizer(
+        [prompt_style_with_context.format(context, theorem_statement, "")],
+        return_tensors="pt",
+    ).to(device)
+
+    outputs = model.generate(
+        input_ids=inputs.input_ids,
+        attention_mask=inputs.attention_mask,
+        max_new_tokens=4096,
+        use_cache=True,
+    )
+    response = tokenizer.batch_decode(outputs)
+    return response
 
 
 if __name__ == "__main__":

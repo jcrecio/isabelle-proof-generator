@@ -13,6 +13,9 @@ from transformers import AutoTokenizer
 from transformers import pipeline
 from unsloth import FastLanguageModel
 
+WITH_CONTEXT = False
+WITH_RAG = False
+
 # EMBEDDING_MODEL_NAME = "jcrecio/risamath-v0.1"
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
@@ -36,7 +39,23 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     load_in_4bit=True,  # Enable 4-bit quantization
 )
 
+
 prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
+Write a response that appropriately completes the request.
+Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
+
+### Instruction:
+You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
+Infer a proof for the following Isabelle/HOL theorem statement.
+
+### Theorem statement:
+{}
+
+### Proof:
+<think>{}"""
+
+
+prompt_style_with_context = """Below is an instruction that describes a task, paired with an input that provides further context.
 Write a response that appropriately completes the request.
 Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
 
@@ -54,9 +73,26 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 <think>{}"""
 
 
-def infer_proof(context, theorem_statement, device):
+def infer_proof(theorem_statement, device):
     inputs = tokenizer(
-        [prompt_style.format(context, theorem_statement, "")], return_tensors="pt"
+        [prompt_style.format(theorem_statement, "")],
+        return_tensors="pt",
+    ).to(device)
+
+    outputs = model.generate(
+        input_ids=inputs.input_ids,
+        attention_mask=inputs.attention_mask,
+        max_new_tokens=4096,
+        use_cache=True,
+    )
+    response = tokenizer.batch_decode(outputs)
+    return response
+
+
+def infer_proof_with_context(context, theorem_statement, device):
+    inputs = tokenizer(
+        [prompt_style_with_context.format(context, theorem_statement, "")],
+        return_tensors="pt",
     ).to(device)
 
     outputs = model.generate(
@@ -70,25 +106,67 @@ def infer_proof(context, theorem_statement, device):
 
 
 while True:
-    context = input(
-        "Please enter the context for the problem (or leave it empty if no context), or write EXIT to quit:"
-    )
-    if context == "EXIT":
-        break
-    theorem_statement = input(
-        "Please enter the theorem statement you want to infer a proof for, or write EXIT to quit:"
-    )
-    if theorem_statement == "EXIT":
-        break
+    proof = ""
 
-    user_query = prompt_style.format(context, theorem_statement, "")
-    retrieved_docs = KNOWLEDGE_VECTOR_DATABASE.similarity_search(query=user_query, k=5)
-    retrieved_docs_text = [doc.page_content for doc in retrieved_docs]
-    additional_context = "\nExtracted documents:\n"
-    additional_context += "".join(
-        [f"Document {str(i)}:::\n" + doc for i, doc in enumerate(retrieved_docs_text)]
-    )
+    if WITH_CONTEXT:
+        context = input(
+            "Please enter the context for the problem (or leave it empty if no context), or write EXIT to quit:"
+        )
+        if context == "EXIT":
+            break
+        theorem_statement = input(
+            "Please enter the theorem statement you want to infer a proof for, or write EXIT to quit:"
+        )
+        if theorem_statement == "EXIT":
+            break
 
-    proof = infer_proof(f"{additional_context} {context}", theorem_statement, "cuda")
-    print("Inferred proof:\n")
-    print(proof)
+        if WITH_RAG:
+            user_query = prompt_style_with_context.format(
+                context, theorem_statement, ""
+            )
+            retrieved_docs = KNOWLEDGE_VECTOR_DATABASE.similarity_search(
+                query=user_query, k=5
+            )
+            retrieved_docs_text = [doc.page_content for doc in retrieved_docs]
+            additional_context = "\nExtracted documents:\n"
+            additional_context += "".join(
+                [
+                    f"Document {str(i)}:::\n" + doc
+                    for i, doc in enumerate(retrieved_docs_text)
+                ]
+            )
+            context = f"{additional_context} {context}"
+        proof = infer_proof_with_context(f"{context}", theorem_statement, "cuda")
+        print("Inferred proof:\n")
+        print(proof)
+    else:
+        theorem_statement = input(
+            "Please enter the theorem statement you want to infer a proof for, or write EXIT to quit:"
+        )
+        if theorem_statement == "EXIT":
+            break
+
+        if WITH_RAG:
+            user_query = prompt_style_with_context.format(
+                context, theorem_statement, ""
+            )
+            retrieved_docs = KNOWLEDGE_VECTOR_DATABASE.similarity_search(
+                query=user_query, k=5
+            )
+            retrieved_docs_text = [doc.page_content for doc in retrieved_docs]
+            additional_context = "\nExtracted documents:\n"
+            additional_context += "".join(
+                [
+                    f"Document {str(i)}:::\n" + doc
+                    for i, doc in enumerate(retrieved_docs_text)
+                ]
+            )
+
+            proof = infer_proof_with_context(
+                f"{additional_context} {context}", theorem_statement, "cuda"
+            )
+        else:
+            proof = infer_proof(theorem_statement, "cuda")
+
+        print("Inferred proof:\n")
+        print(proof)
