@@ -1,5 +1,3 @@
-import datasets
-import pandas as pd
 from typing import Optional, List, Tuple
 from datasets import Dataset, load_dataset
 from langchain.docstore.document import Document as LangchainDocument
@@ -20,7 +18,7 @@ dataset = load_dataset(
 )
 
 RAW_KNOWLEDGE_BASE = [
-    LangchainDocument(page_content=doc["proof"], metadata={"source": doc["source"]})
+    LangchainDocument(page_content=doc["content"], metadata={"source": doc["source"]})
     for doc in tqdm_std(dataset)
 ]
 
