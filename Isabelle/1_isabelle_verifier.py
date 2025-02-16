@@ -460,7 +460,8 @@ EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
 def load_model():
-    model_name = sys.argv[1] or "jcrecio/Remath-v0.1"
+    base_model_name = sys.argv[1] or "unsloth/DeepSeek-R1-Distill-Llama-8B"
+    model_name = sys.argv[2] or "jcrecio/Remath-v0.1"
     if UNSLOTH:
         model_name = sys.argv[1] or "jcrecio/Remath-v0.1"
         model, tokenizer = FastLanguageModel.from_pretrained(
@@ -472,7 +473,7 @@ def load_model():
         FastLanguageModel.for_inference(model)
         return tokenizer
     else:
-        base_model_name = "unsloth/DeepSeek-R1-Distill-Llama-8B"
+        base_model_name = base_model_name
         base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name, device_map="auto", torch_dtype=torch.float16
         )
@@ -553,7 +554,7 @@ def infer_proof_with_context(context, theorem_statement, device="cuda"):
         return_tensors="pt",
     ).to(device)
 
-    outputs = model.generate(
+    outputs = MODEL.generate(
         input_ids=inputs.input_ids,
         attention_mask=inputs.attention_mask,
         max_new_tokens=4096,
