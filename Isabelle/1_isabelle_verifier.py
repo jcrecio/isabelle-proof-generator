@@ -460,7 +460,7 @@ EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
 def load_model():
-    only_base = len(sys.argv) >= 2 and sys.argv[1] or False
+    only_base = len(sys.argv) >= 2 and sys.argv[1] == "True" or False
     base_model_name = (
         len(sys.argv) >= 3 and sys.argv[2] or "unsloth/DeepSeek-R1-Distill-Llama-8B"
     )
