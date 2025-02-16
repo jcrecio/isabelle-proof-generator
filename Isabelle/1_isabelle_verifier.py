@@ -456,32 +456,42 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 WITH_CONTEXT = False
 WITH_RAG = False
 UNSLOTH = False
+PROMPT_STYLE = "Math"
+
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
+# command UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing) PROMPT(MATH/REASONING)
 def load_model():
-    only_base = len(sys.argv) >= 2 and sys.argv[1] == "True" or False
-    base_model_name = (
-        len(sys.argv) >= 3 and sys.argv[2] or "unsloth/DeepSeek-R1-Distill-Llama-8B"
-    )
-    model_name = len(sys.argv) >= 4 and sys.argv[3] or "jcrecio/Remath-v0.1"
+    if len(sys.argv) != 5:
+        print("Run the programm as follows: \n")
+        print(
+            "python 1_isabelle_verifier.py UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing)"
+        )
+        exit
+
+    UNSLOTH = True if sys.argv[1] == "True" else False
+    BASE_ONLY = True if sys.argv[2] == "True" else False
+    base_model_name = sys.argv[3]
+    model_name = sys.argv[4]
+    PROMPT_STYLE = sys.argv[5]
+
     if UNSLOTH:
-        if only_base:
-            model, tokenizer = FastLanguageModel.from_pretrained(
-                base_model_name,
-                base_model_name=4096,
-                dtype=None,  # Uses bfloat16 if available, else float16
-                load_in_4bit=True,  # Enable 4-bit quantization
-            )
-            FastLanguageModel.for_inference(model)
-            return tokenizer
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            base_model_name,
+            base_model_name=4096,
+            dtype=None,  # Uses bfloat16 if available, else float16
+            load_in_4bit=True,  # Enable 4-bit quantization
+        )
+        FastLanguageModel.for_inference(model)
+        return tokenizer
     else:
         base_model_name = base_model_name
         base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name, device_map="auto", torch_dtype=torch.float16
         )
         tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-        if only_base:
+        if BASE_ONLY:
             return base_model, tokenizer
 
         adapter_path = model_name
@@ -489,7 +499,14 @@ def load_model():
         return model, tokenizer
 
 
-prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
+math_prompt_style = """
+You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. 
+You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.
+[INST]Infer a proof for the following Isabelle/HOL theorem statement/s: {}[/INST]
+{}
+"""
+
+reasoning_prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
 Write a response that appropriately completes the request.
 Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
 
@@ -504,7 +521,7 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 <think>{}"""
 
 
-prompt_style_with_context = """Below is an instruction that describes a task, paired with an input that provides further context.
+reasoning_prompt_style_with_context = """Below is an instruction that describes a task, paired with an input that provides further context.
 Write a response that appropriately completes the request.
 Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
 
@@ -523,10 +540,20 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 
 
 def infer_proof(theorem_statement, device="cuda"):
+    prompt_to_use = (
+        math_prompt_style if PROMPT_STYLE == "Math" else reasoning_prompt_style
+    )
+
     if WITH_RAG:
         load_rag()
+
+        prompt_to_use = (
+            math_prompt_style if PROMPT_STYLE == "Math" else reasoning_prompt_style
+        )
+
+        math_prompt_style
         inputs = TOKENIZER(
-            [prompt_style.format(theorem_statement, "")],
+            [prompt_to_use.format(theorem_statement, "")],
             return_tensors="pt",
         ).to(device)
 
@@ -540,7 +567,7 @@ def infer_proof(theorem_statement, device="cuda"):
         return response
     else:
         inputs = TOKENIZER(
-            [prompt_style.format(theorem_statement, "")],
+            [prompt_to_use.format(theorem_statement, "")],
             return_tensors="pt",
         ).to(device)
 
@@ -556,7 +583,7 @@ def infer_proof(theorem_statement, device="cuda"):
 
 def infer_proof_with_context(context, theorem_statement, device="cuda"):
     inputs = TOKENIZER(
-        [prompt_style_with_context.format(context, theorem_statement, "")],
+        [reasoning_prompt_style_with_context.format(context, theorem_statement, "")],
         return_tensors="pt",
     ).to(device)
 
