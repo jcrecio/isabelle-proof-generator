@@ -417,16 +417,16 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     generated_proof = infer_proof(lemma)
 
                     print(f"<b>Ground proof:</b><pre><code>{ground_proof}</code></pre>")
-                    generated_proof_without_tags = generated_proof.replace(
-                        "['<｜begin▁of▁sentence｜>", ""
-                    ).replace("['<｜end▁of▁sentence｜>", "")
-
                     print(
-                        f"<b>Generated proof:</b><pre><code>{generated_proof_without_tags}</code></pre>"
+                        f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>"
                     )
-                    # new_theory_content = theory_content.replace(
-                    #     ground_proof, generated_proof
-                    # )
+                    # generated_proof_without_tags = generated_proof.replace(
+                    #     "['<｜begin▁of▁sentence｜>", ""
+                    # ).replace("['<｜end▁of▁sentence｜>", "")
+
+                    new_theory_content = theory_content.replace(
+                        ground_proof, generated_proof
+                    )
                     next_lemma = None
                     if (lemma_index + 1) < len(lemmas_and_proofs):
                         next_lemma = lemmas_and_proofs[lemma_index + 1][0]
