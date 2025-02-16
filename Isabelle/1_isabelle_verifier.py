@@ -38,7 +38,7 @@ ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
 
 model = None
-tokenizer: Any = None
+TOKENIZER: Any = None
 
 
 def log(
@@ -411,7 +411,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                     backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
                     theory_content = read_file(original_theory_file)
-                    generated_proof = infer_proof(lemma, tokenizer)
+                    generated_proof = infer_proof(lemma, TOKENIZER)
 
                     new_theory_content = theory_content.replace(
                         ground_proof, generated_proof
@@ -458,13 +458,14 @@ def load_model():
             dtype=None,  # Uses bfloat16 if available, else float16
             load_in_4bit=True,  # Enable 4-bit quantization
         )
+        TOKENIZER = tokenizer
         FastLanguageModel.for_inference(model)
     else:
         base_model_name = "unsloth/DeepSeek-R1-Distill-Llama-8B"
         base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name, device_map="auto", torch_dtype=torch.float16
         )
-        tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+        TOKENIZER = AutoTokenizer.from_pretrained(base_model_name)
         adapter_path = model_name
         model = PeftModel.from_pretrained(base_model, adapter_path)
 
@@ -550,6 +551,7 @@ def infer_proof_with_context(context, theorem_statement, tokenizer, device="cuda
     return response
 
 
+load_model()
 verify_all_sessions(
     "/home/jcrecio/repos/isabelle-proof-generator/afp_extractions/afp_extractions",
     "/home/jcrecio/repos/isabelle-proof-generator/afp-current-extractions",
