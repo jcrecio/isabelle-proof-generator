@@ -413,6 +413,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     theory_content = read_file(original_theory_file)
                     generated_proof = infer_proof(lemma)
 
+                    log("Theorem/Lemma input:", lemma)
+                    log("Found proof:", ground_proof)
+                    log("Generated proof:", generated_proof)
                     # new_theory_content = theory_content.replace(
                     #     ground_proof, generated_proof
                     # )
