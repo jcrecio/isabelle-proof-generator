@@ -1,3 +1,6 @@
+# How to run: python 1_isabelle_verifier.py UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing) PROMPT(MATH/REASONING)
+
+
 import json
 import os
 import re
@@ -16,16 +19,9 @@ import datasets
 import pandas as pd
 from typing import Optional, List, Tuple
 from datasets import Dataset, load_dataset
-from langchain.docstore.document import Document as LangchainDocument
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores.utils import DistanceStrategy
 from tqdm.std import tqdm as tqdm_std
 from transformers import AutoTokenizer
 from transformers import pipeline
-from unsloth import FastLanguageModel
 from huggingface_hub import hf_hub_download
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
 from peft import PeftModel
@@ -461,13 +457,11 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
 WITH_CONTEXT = False
 WITH_RAG = False
-UNSLOTH = False
 PROMPT_STYLE = "Math"
 
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
-# command UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing) PROMPT(MATH/REASONING)
 def load_model():
     if len(sys.argv) != 5:
         print("Run the programm as follows: \n")
@@ -476,13 +470,21 @@ def load_model():
         )
         exit
 
-    UNSLOTH = True if sys.argv[1] == "True" else False
     BASE_ONLY = True if sys.argv[2] == "True" else False
     base_model_name = sys.argv[3]
     model_name = sys.argv[4]
     PROMPT_STYLE = sys.argv[5]
+    UNSLOTH = True if sys.argv[1] == "True" else False
 
     if UNSLOTH:
+        from langchain.docstore.document import Document as LangchainDocument
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+        from langchain.vectorstores import FAISS
+        from langchain.embeddings import HuggingFaceEmbeddings
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        from langchain_community.vectorstores.utils import DistanceStrategy
+        from unsloth import FastLanguageModel
+
         model, tokenizer = FastLanguageModel.from_pretrained(
             base_model_name,
             base_model_name=4096,
@@ -511,7 +513,7 @@ def load_model():
 math_prompt_style = """
 You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. 
 You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.
-[INST]Infer a proof for the following Isabelle/HOL lemma: {}. Answer only with the proof.   [/INST]
+[INST]Infer a proof for the following Isabelle/HOL lemma: {}. Answer only with a Isabelle/HOL proof. [/INST]
 {}
 """
 
