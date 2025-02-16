@@ -411,7 +411,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                     backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
                     theory_content = read_file(original_theory_file)
-                    generated_proof = infer_proof(lemma)
+                    generated_proof = infer_proof(lemma, tokenizer)
 
                     new_theory_content = theory_content.replace(
                         ground_proof, generated_proof
@@ -502,7 +502,7 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 <think>{}"""
 
 
-def infer_proof(theorem_statement, device="cuda"):
+def infer_proof(theorem_statement, tokenizer, device="cuda"):
     if WITH_RAG:
         load_rag()
         inputs = tokenizer(
@@ -534,7 +534,7 @@ def infer_proof(theorem_statement, device="cuda"):
         return response
 
 
-def infer_proof_with_context(context, theorem_statement, device="cuda"):
+def infer_proof_with_context(context, theorem_statement, tokenizer, device="cuda"):
     inputs = tokenizer(
         [prompt_style_with_context.format(context, theorem_statement, "")],
         return_tensors="pt",
