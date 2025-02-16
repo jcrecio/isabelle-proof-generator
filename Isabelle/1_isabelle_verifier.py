@@ -494,7 +494,10 @@ def load_model():
     else:
         base_model_name = base_model_name
         base_model = AutoModelForCausalLM.from_pretrained(
-            base_model_name, device_map="auto", torch_dtype=torch.float16
+            base_model_name,
+            device_map="auto",
+            torch_dtype=torch.float16,
+            token=hf_token,
         )
         tokenizer = AutoTokenizer.from_pretrained(base_model_name)
         if BASE_ONLY:
