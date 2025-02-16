@@ -35,7 +35,7 @@ hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
 VERBOSE = True
-ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
+ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
 
@@ -308,9 +308,6 @@ def replace_lemma_proof(
         duplicate_lemma_new_proof(content, current_lemma, new_proof)
 
     result_lines = lines[: start_idx + 1] + [new_proof] + lines[proof_idx:]
-
-    log("item 202", result_lines[202])
-    log("item 203", result_lines[203])
 
     return "\n".join(result_lines)
 
