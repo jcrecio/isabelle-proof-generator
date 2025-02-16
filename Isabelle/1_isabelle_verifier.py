@@ -31,6 +31,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
 from peft import PeftModel
 import torch
 import pickle
+from huggingface_hub import login
+from dotenv import load_dotenv
+
+load_dotenv()
+hf_token = os.getenv("HF_TOKEN")
+login(hf_token)
 
 VERBOSE = True
 ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
