@@ -37,7 +37,7 @@ ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
 
-model = None
+MODEL: Any = None
 TOKENIZER: Any = None
 
 
@@ -470,7 +470,7 @@ def load_model():
         adapter_path = model_name
         model = PeftModel.from_pretrained(base_model, adapter_path)
         log("load model regular tokenizer", tokenizer)
-        return tokenizer
+        return model, tokenizer
 
 
 prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
@@ -517,7 +517,7 @@ def infer_proof(theorem_statement, device="cuda"):
             return_tensors="pt",
         ).to(device)
 
-        outputs = model.generate(
+        outputs = MODEL.generate(
             input_ids=inputs.input_ids,
             attention_mask=inputs.attention_mask,
             max_new_tokens=4096,
@@ -531,7 +531,7 @@ def infer_proof(theorem_statement, device="cuda"):
             return_tensors="pt",
         ).to(device)
 
-        outputs = model.generate(
+        outputs = MODEL.generate(
             input_ids=inputs.input_ids,
             attention_mask=inputs.attention_mask,
             max_new_tokens=4096,
@@ -557,7 +557,7 @@ def infer_proof_with_context(context, theorem_statement, device="cuda"):
     return response
 
 
-TOKENIZER = load_model()
+MODEL, TOKENIZER = load_model()
 log("verify_all_sessions", TOKENIZER)
 verify_all_sessions(
     "/home/jcrecio/repos/isabelle-proof-generator/afp_extractions/afp_extractions",
