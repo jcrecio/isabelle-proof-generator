@@ -1,4 +1,5 @@
 # Isabelle-proof-generator
+:warning: It is outdated, needs to be updated!
 
 ## 0. Create the dataset
 

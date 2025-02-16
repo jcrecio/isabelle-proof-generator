@@ -535,6 +535,6 @@ def infer_proof_with_context(context, theorem_statement, device="cuda"):
 
 
 verify_all_sessions(
-    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp_extractions/afp_extractions",
-    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions",
+    "/home/jcrecio/repos/isabelle-proof-generator/afp_extractions/afp_extractions",
+    "/home/jcrecio/repos/isabelle-proof-generator/afp-current-extractions",
 )
