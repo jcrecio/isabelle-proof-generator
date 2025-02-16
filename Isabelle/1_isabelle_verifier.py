@@ -451,6 +451,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     dtype=None,  # Uses bfloat16 if available, else float16
     load_in_4bit=True,  # Enable 4-bit quantization
 )
+FastLanguageModel.for_inference(model)
 
 
 prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
