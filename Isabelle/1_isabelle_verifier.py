@@ -37,6 +37,9 @@ ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
 
+model = None
+tokenizer: Any = None
+
 
 def log(
     *values: Any,
@@ -443,9 +446,6 @@ WITH_CONTEXT = False
 WITH_RAG = False
 UNSLOTH = False
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
-
-model = None
-tokenizer = None
 
 
 def load_model():
