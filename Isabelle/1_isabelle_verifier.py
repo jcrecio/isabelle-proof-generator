@@ -307,6 +307,9 @@ def replace_lemma_proof(
 
     result_lines = lines[: start_idx + 1] + [new_proof] + lines[proof_idx:]
 
+    log("item 202", result_lines[202])
+    log("item 203", result_lines[203])
+
     return "\n".join(result_lines)
 
 
