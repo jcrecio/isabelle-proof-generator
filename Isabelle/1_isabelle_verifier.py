@@ -411,7 +411,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                     backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
                     theory_content = read_file(original_theory_file)
-                    generated_proof = infer_proof(lemma, TOKENIZER)
+                    generated_proof = infer_proof(lemma)
 
                     new_theory_content = theory_content.replace(
                         ground_proof, generated_proof
@@ -458,16 +458,19 @@ def load_model():
             dtype=None,  # Uses bfloat16 if available, else float16
             load_in_4bit=True,  # Enable 4-bit quantization
         )
-        TOKENIZER = tokenizer
         FastLanguageModel.for_inference(model)
+        log("load model UNSLOTH tokenizer", tokenizer)
+        return tokenizer
     else:
         base_model_name = "unsloth/DeepSeek-R1-Distill-Llama-8B"
         base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name, device_map="auto", torch_dtype=torch.float16
         )
-        TOKENIZER = AutoTokenizer.from_pretrained(base_model_name)
+        tokenizer = AutoTokenizer.from_pretrained(base_model_name)
         adapter_path = model_name
         model = PeftModel.from_pretrained(base_model, adapter_path)
+        log("load model regular tokenizer", tokenizer)
+        return tokenizer
 
 
 prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
@@ -503,10 +506,13 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 <think>{}"""
 
 
-def infer_proof(theorem_statement, tokenizer, device="cuda"):
+def infer_proof(theorem_statement, device="cuda"):
+    log("infer proof -> tokenizer")
+    log(TOKENIZER)
+    log("----------------------------")
     if WITH_RAG:
         load_rag()
-        inputs = tokenizer(
+        inputs = TOKENIZER(
             [prompt_style.format(theorem_statement, "")],
             return_tensors="pt",
         ).to(device)
@@ -517,10 +523,10 @@ def infer_proof(theorem_statement, tokenizer, device="cuda"):
             max_new_tokens=4096,
             use_cache=True,
         )
-        response = tokenizer.batch_decode(outputs)
+        response = TOKENIZER.batch_decode(outputs)
         return response
     else:
-        inputs = tokenizer(
+        inputs = TOKENIZER(
             [prompt_style.format(theorem_statement, "")],
             return_tensors="pt",
         ).to(device)
@@ -531,12 +537,12 @@ def infer_proof(theorem_statement, tokenizer, device="cuda"):
             max_new_tokens=4096,
             use_cache=True,
         )
-        response = tokenizer.batch_decode(outputs)
+        response = TOKENIZER.batch_decode(outputs)
         return response
 
 
-def infer_proof_with_context(context, theorem_statement, tokenizer, device="cuda"):
-    inputs = tokenizer(
+def infer_proof_with_context(context, theorem_statement, device="cuda"):
+    inputs = TOKENIZER(
         [prompt_style_with_context.format(context, theorem_statement, "")],
         return_tensors="pt",
     ).to(device)
@@ -547,11 +553,12 @@ def infer_proof_with_context(context, theorem_statement, tokenizer, device="cuda
         max_new_tokens=4096,
         use_cache=True,
     )
-    response = tokenizer.batch_decode(outputs)
+    response = TOKENIZER.batch_decode(outputs)
     return response
 
 
-load_model()
+TOKENIZER = load_model()
+log("verify_all_sessions", TOKENIZER)
 verify_all_sessions(
     "/home/jcrecio/repos/isabelle-proof-generator/afp_extractions/afp_extractions",
     "/home/jcrecio/repos/isabelle-proof-generator/afp-current-extractions",
