@@ -189,8 +189,8 @@ def verify_isabelle_session(project_folder: str):
     command_string = f"{ISABELLE_COMMAND} {project_folder}"
     command = convert_to_shell_command(command_string)
 
-    log("\n")
-    log(f"Verifying Isabelle project... {project_folder.split('/')[-1]}")
+    log("<br>")
+    log(f"<b>Verifying Isabelle project... {project_folder.split('/')[-1]}</b>")
     output = run_command_with_output(command)
     if "error" in output[1]:
         return [False, output[1]]
@@ -413,9 +413,10 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     theory_content = read_file(original_theory_file)
                     generated_proof = infer_proof(lemma)
 
-                    log("Theorem/Lemma input:", lemma)
-                    log("Found proof:", ground_proof)
-                    log("Generated proof:", generated_proof)
+                    log(f"<b>Ground proof:</b><pre><code>{ground_proof}</code></pre>")
+                    log(
+                        f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>"
+                    )
                     # new_theory_content = theory_content.replace(
                     #     ground_proof, generated_proof
                     # )
