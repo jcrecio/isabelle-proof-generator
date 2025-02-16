@@ -27,7 +27,9 @@ from transformers import AutoTokenizer
 from transformers import pipeline
 from unsloth import FastLanguageModel
 from huggingface_hub import hf_hub_download
-
+from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
+from peft import PeftModel
+import torch
 import pickle
 
 VERBOSE = True
@@ -439,19 +441,32 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
 WITH_CONTEXT = False
 WITH_RAG = False
-
+UNSLOTH = False
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
+model = None
+tokenizer = None
 
-# Load the LLM reader
-model_name = sys.argv[1] or "jcrecio/Remath-v0.1"
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name,
-    max_seq_length=4096,
-    dtype=None,  # Uses bfloat16 if available, else float16
-    load_in_4bit=True,  # Enable 4-bit quantization
-)
-FastLanguageModel.for_inference(model)
+
+def load_model():
+    model_name = sys.argv[1] or "jcrecio/Remath-v0.1"
+    if UNSLOTH:
+        model_name = sys.argv[1] or "jcrecio/Remath-v0.1"
+        model, tokenizer = FastLanguageModel.from_pretrained(
+            model_name,
+            max_seq_length=4096,
+            dtype=None,  # Uses bfloat16 if available, else float16
+            load_in_4bit=True,  # Enable 4-bit quantization
+        )
+        FastLanguageModel.for_inference(model)
+    else:
+        base_model_name = "unsloth/DeepSeek-R1-Distill-Llama-8B"
+        base_model = AutoModelForCausalLM.from_pretrained(
+            base_model_name, device_map="auto", torch_dtype=torch.float16
+        )
+        tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+        adapter_path = model_name
+        model = PeftModel.from_pretrained(base_model, adapter_path)
 
 
 prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
