@@ -420,7 +420,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                     backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
                     theory_content = read_file(original_theory_file)
-                    generated_proof = infer_proof(lemma)
+                    generated_proof = infer_proof(lemma)[0]
 
                     print(f"<b>Ground proof:</b><pre><code>{ground_proof}</code></pre>")
                     print(
@@ -511,7 +511,7 @@ def load_model():
 math_prompt_style = """
 You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. 
 You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.
-[INST]Infer a proof for the following Isabelle/HOL theorem statement/s: {}[/INST]
+[INST]Infer a proof for the following Isabelle/HOL lemma: {}. Answer only with the proof.   [/INST]
 {}
 """
 
