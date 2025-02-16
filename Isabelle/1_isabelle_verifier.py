@@ -413,9 +413,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     theory_content = read_file(original_theory_file)
                     generated_proof = infer_proof(lemma)
 
-                    new_theory_content = theory_content.replace(
-                        ground_proof, generated_proof
-                    )
+                    # new_theory_content = theory_content.replace(
+                    #     ground_proof, generated_proof
+                    # )
                     next_lemma = None
                     if (lemma_index + 1) < len(lemmas_and_proofs):
                         next_lemma = lemmas_and_proofs[lemma_index + 1][0]
@@ -459,7 +459,6 @@ def load_model():
             load_in_4bit=True,  # Enable 4-bit quantization
         )
         FastLanguageModel.for_inference(model)
-        log("load model UNSLOTH tokenizer", tokenizer)
         return tokenizer
     else:
         base_model_name = "unsloth/DeepSeek-R1-Distill-Llama-8B"
@@ -469,7 +468,6 @@ def load_model():
         tokenizer = AutoTokenizer.from_pretrained(base_model_name)
         adapter_path = model_name
         model = PeftModel.from_pretrained(base_model, adapter_path)
-        log("load model regular tokenizer", tokenizer)
         return model, tokenizer
 
 
@@ -507,9 +505,6 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 
 
 def infer_proof(theorem_statement, device="cuda"):
-    log("infer proof -> tokenizer")
-    log(TOKENIZER)
-    log("----------------------------")
     if WITH_RAG:
         load_rag()
         inputs = TOKENIZER(
@@ -558,7 +553,6 @@ def infer_proof_with_context(context, theorem_statement, device="cuda"):
 
 
 MODEL, TOKENIZER = load_model()
-log("verify_all_sessions", TOKENIZER)
 verify_all_sessions(
     "/home/jcrecio/repos/isabelle-proof-generator/afp_extractions/afp_extractions",
     "/home/jcrecio/repos/isabelle-proof-generator/afp-current-extractions",
