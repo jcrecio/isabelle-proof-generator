@@ -460,24 +460,30 @@ EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
 def load_model():
-    base_model_name = sys.argv[1] or "unsloth/DeepSeek-R1-Distill-Llama-8B"
-    model_name = sys.argv[2] or "jcrecio/Remath-v0.1"
+    only_base = len(sys.argv) >= 2 and sys.argv[1] or False
+    base_model_name = (
+        len(sys.argv) >= 3 and sys.argv[2] or "unsloth/DeepSeek-R1-Distill-Llama-8B"
+    )
+    model_name = len(sys.argv) >= 4 and sys.argv[3] or "jcrecio/Remath-v0.1"
     if UNSLOTH:
-        model_name = sys.argv[1] or "jcrecio/Remath-v0.1"
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name,
-            max_seq_length=4096,
-            dtype=None,  # Uses bfloat16 if available, else float16
-            load_in_4bit=True,  # Enable 4-bit quantization
-        )
-        FastLanguageModel.for_inference(model)
-        return tokenizer
+        if only_base:
+            model, tokenizer = FastLanguageModel.from_pretrained(
+                base_model_name,
+                base_model_name=4096,
+                dtype=None,  # Uses bfloat16 if available, else float16
+                load_in_4bit=True,  # Enable 4-bit quantization
+            )
+            FastLanguageModel.for_inference(model)
+            return tokenizer
     else:
         base_model_name = base_model_name
         base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name, device_map="auto", torch_dtype=torch.float16
         )
         tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+        if only_base:
+            return base_model, tokenizer
+
         adapter_path = model_name
         model = PeftModel.from_pretrained(base_model, adapter_path)
         return model, tokenizer
