@@ -17,11 +17,11 @@ login(hf_token)
 WITH_CONTEXT = os.getenv("WITH_CONTEXT")
 
 new_model_local = (
-    "jcrecio/Remath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.1"
+    "jcrecio/Remath-v0.2-c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.2"
 )
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project="Remath-v0.1-c" if WITH_CONTEXT == "True" else "Remath-v0.1",
+    project="Remath-v0.2-c" if WITH_CONTEXT == "True" else "Remath-v0.2",
     job_type="training",
     anonymous="allow",
 )
@@ -50,12 +50,32 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 
 ### Theorem statement:
 {}
-
-### Proof:
 <think>
 {}
 </think>
+### Proof:
+{}
+"""
+train_prompt_style_with_context = """Below is an instruction that describes a task, paired with an input that provides further context.
+Write a response that appropriately completes the request.
+Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
+
+### Instruction:
+You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
+Infer a proof for the following Isabelle/HOL theorem statement.
+
+### Context:
+{}
+
+### Theorem statement:
+{}
+
+<think>
+{}
+</think>
+### Proof:
 {}"""
+
 
 EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
 

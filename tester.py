@@ -1,4 +1,4 @@
-# How to run: python tester.py UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing) PROMPT(MATH/REASONING)
+# How to run: python tester.py UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing) PROMPT(MATH/REASONING) MODE(FULL/PROOF)
 
 
 import json
@@ -295,6 +295,8 @@ def infer(prompt, device="cuda"):
 
 MODEL, TOKENIZER = load_model()
 
+mode = sys.argv[6]
+
 while True:
     print(
         "******************************************************************************************"
@@ -302,8 +304,15 @@ while True:
     print(
         "******************************************************************************************"
     )
-    prompt = input("Please enter your prompt:")
-    if prompt == "EXIT":
-        break
-    response = infer(prompt)
-    print(response)
+    if mode == "full":
+        prompt = input("Please enter your prompt:")
+        if prompt == "EXIT":
+            break
+        response = infer(prompt)
+        print(response)
+    else:
+        theorem_statement = input("Please enter the theorem statement:")
+        if theorem_statement == "EXIT":
+            break
+        response = infer_proof(theorem_statement)
+        print(response)
