@@ -495,7 +495,7 @@ def load_model():
             load_in_4bit=True,  # Enable 4-bit quantization
         )
         FastLanguageModel.for_inference(model)
-        return tokenizer
+        return model, tokenizer
     else:
         base_model_name = base_model_name
         base_model = AutoModelForCausalLM.from_pretrained(
