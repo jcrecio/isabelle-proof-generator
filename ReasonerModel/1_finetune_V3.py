@@ -1,3 +1,4 @@
+import json
 import wandb
 import os
 from huggingface_hub import login
@@ -17,11 +18,11 @@ login(hf_token)
 WITH_CONTEXT = os.getenv("WITH_CONTEXT")
 
 new_model_local = (
-    "jcrecio/Remath-v0.1-c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.1"
+    "jcrecio/Remath-v0.2-c" if WITH_CONTEXT == "True" else "jcrecio/Remath-v0.2"
 )
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project="Remath-v0.1-c" if WITH_CONTEXT == "True" else "Remath-v0.1",
+    project="Remath-v0.2-c" if WITH_CONTEXT == "True" else "Remath-v0.2",
     job_type="training",
     anonymous="allow",
 )
@@ -40,7 +41,21 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     token=hf_token,
 )
 
-train_prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
+train_prompt_style = {
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL. Your task is to carefully analyze theorem statements and provide detailed proofs with step-by-step reasoning.",
+        },
+        {
+            "role": "user",
+            "content": "Please provide a proof for the following Isabelle/HOL theorem:\n{theorem}",
+        },
+        {"role": "assistant", "thinking": "{reasoning}", "proof": "{proof}"},
+    ]
+}
+
+train_prompt_style_with_context = """Below is an instruction that describes a task, paired with an input that provides further context.
 Write a response that appropriately completes the request.
 Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
 
@@ -48,14 +63,18 @@ Before answering, think carefully about the question and create a step-by-step c
 You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
 Infer a proof for the following Isabelle/HOL theorem statement.
 
+### Context:
+{}
+
 ### Theorem statement:
 {}
 
-### Proof:
 <think>
 {}
 </think>
+### Proof:
 {}"""
+
 
 EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
 
@@ -82,16 +101,25 @@ def formatting_prompts_func_with_context(examples):
 
 
 def formatting_prompts_func(examples):
-    theorem_statements = examples["theorem_statement"]
-    thinks = examples["reasoning"]
+    theorems = examples["theorem"]  # Adjust field name based on your dataset
+    reasoning = examples["reasoning"]
     proofs = examples["proof"]
     texts = []
-    for theorem_statement, think, proof in zip(theorem_statements, thinks, proofs):
-        text = train_prompt_style.format(theorem_statement, think, proof) + EOS_TOKEN
+
+    for theorem, think, proof in zip(theorems, reasoning, proofs):
+        # Create a copy of the template and fill it
+        prompt = train_prompt_style.copy()
+        prompt["messages"][1][
+            "content"
+        ] = f"Please provide a proof for the following Isabelle/HOL theorem:\n{theorem}"
+        prompt["messages"][2]["thinking"] = think
+        prompt["messages"][2]["proof"] = proof
+
+        # Convert to string and add EOS token
+        text = json.dumps(prompt) + EOS_TOKEN
         texts.append(text)
-    return {
-        "text": texts,
-    }
+
+    return {"text": texts}
 
 
 DATASET_FILE = (
