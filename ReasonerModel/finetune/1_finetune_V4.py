@@ -1,3 +1,5 @@
+# BASE MODEL: "unsloth/DeepSeek-R1-Distill-Llama-8B"
+
 import json
 import wandb
 import os
@@ -11,11 +13,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 wandb_token = os.getenv("WANDB_TOKEN")
-
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
-
-WITH_CONTEXT = os.getenv("WITH_CONTEXT")
 
 new_model_local = "jcrecio/Remath-v0.4"
 wandb.login(key=wandb_token)
@@ -51,21 +50,7 @@ train_prompt_style = {
     ]
 }
 
-inference_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
-
-Theorem: {theorem}
-
-Think through the proof strategy:
-<think>
-Consider the theorem structure
-Plan the proof approach
-Identify necessary tactics and methods
-</think>
-
-Now provide ONLY the clean Isabelle/HOL proof:
-"""
-
-EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
+EOS_TOKEN = tokenizer.eos_token
 
 
 def formatting_prompts_func(examples):
@@ -75,13 +60,11 @@ def formatting_prompts_func(examples):
     texts = []
 
     for theorem, think, proof in zip(theorems, reasoning, proofs):
-        # Create prompt structure
         prompt = train_prompt_style.copy()
         prompt["messages"][1]["content"] = f"Theorem: {theorem}"
         prompt["messages"][2]["thinking"] = think
-        prompt["messages"][3]["content"] = proof.strip()  # Clean proof only
+        prompt["messages"][3]["content"] = proof.strip()
 
-        # Convert to string and add EOS token
         text = json.dumps(prompt) + EOS_TOKEN
         texts.append(text)
 
@@ -117,7 +100,7 @@ model = FastLanguageModel.get_peft_model(
     lora_alpha=16,
     lora_dropout=0,
     bias="none",
-    use_gradient_checkpointing="unsloth",  # True or "unsloth" for very long context
+    use_gradient_checkpointing="unsloth",
     random_state=3407,
     use_rslora=False,
     loftq_config=None,

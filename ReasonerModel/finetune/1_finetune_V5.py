@@ -32,7 +32,7 @@ load_in_4bit = True
 
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name="unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF",
+    model_name="deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
     max_seq_length=max_seq_length,
     dtype=dtype,
     load_in_4bit=load_in_4bit,
