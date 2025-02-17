@@ -403,6 +403,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
             if not os.path.exists(original_theory_file):
                 log(f"Original theory not found: {original_theory_file}")
             else:
+                log(
+                    "***********************************************************************"
+                )
                 log(f"Processing theory: {theory_file}")
                 log("\n")
 
@@ -443,13 +446,14 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     )
                 if result[0] is False:
                     failures += 1
+                    log("NOT VALID ISABELLE PROOF!!")
                     log(f"Error details: {result[1]}", file=sys.stderr)
                 else:
+                    log("Successful ISABELLE/HOL proof!!")
                     successes += 1
-
-        result = verify_isabelle_session(session)
-        if result[0] == "error":
-            log(f"Error details: {result[1]}", file=sys.stderr)
+                log(
+                    "***********************************************************************"
+                )
 
 
 WITH_RAG = False
