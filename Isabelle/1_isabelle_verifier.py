@@ -527,7 +527,7 @@ Before answering, think carefully about the question and create a step-by-step c
 
 ### Instruction:
 You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
-Infer a proof for the following Isabelle/HOL theorem statement.
+Infer a proof for the following Isabelle/HOL theorem statement. After thinking, respond only with the pure Isabelle/HOL proof.
 
 ### Theorem statement:
 {}
