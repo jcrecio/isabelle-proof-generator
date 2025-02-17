@@ -1,5 +1,9 @@
-import wandb
+# python 1_finetune.py <base_model> <new_model_name>
+
 import os
+import sys
+import json
+import wandb
 from huggingface_hub import login
 from datasets import load_dataset
 from unsloth import is_bfloat16_supported, FastLanguageModel
@@ -7,17 +11,18 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 from dotenv import load_dotenv
 
+new_model_local = f"""jcrecio/{sys.argv[1]}"""
+base_model = sys.argv[2]
+
 load_dotenv()
 
 wandb_token = os.getenv("WANDB_TOKEN")
-
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
-new_model_local = "jcrecio/Remath-v0.1-raw"
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project="Remath-v0.1-raw",
+    project=new_model_local,
     job_type="training",
     anonymous="allow",
 )
@@ -29,32 +34,44 @@ load_in_4bit = True
 
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name="unsloth/DeepSeek-R1-Distill-Llama-8B",
+    model_name=base_model,
     max_seq_length=max_seq_length,
     dtype=dtype,
     load_in_4bit=load_in_4bit,
     token=hf_token,
 )
 
-train_prompt_style = """
-### Isabelle/HOL Theorem statement:
-{}
-### Proof:
-{}"""
+train_prompt_style = {
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an expert in Isabelle/HOL proof generation. Given a theorem statement, you will think through the proof strategy and then provide a clean, valid Isabelle/HOL proof.",
+        },
+        {"role": "user", "content": "Theorem: {theorem}"},
+        {"role": "assistant", "thinking": "{reasoning}", "output": "proof"},
+        {"role": "assistant", "content": "{proof}"},
+    ]
+}
 
-EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
+EOS_TOKEN = tokenizer.eos_token
 
 
 def formatting_prompts_func(examples):
-    theorem_statements = examples["theorem_statement"]
+    theorems = examples["theorem_statement"]
+    reasoning = examples["reasoning"]
     proofs = examples["proof"]
     texts = []
-    for theorem_statement, proof in zip(theorem_statements, proofs):
-        text = train_prompt_style.format(theorem_statement, proof) + EOS_TOKEN
+
+    for theorem, think, proof in zip(theorems, reasoning, proofs):
+        prompt = train_prompt_style.copy()
+        prompt["messages"][1]["content"] = f"Theorem: {theorem}"
+        prompt["messages"][2]["thinking"] = think
+        prompt["messages"][3]["content"] = proof.strip()
+
+        text = json.dumps(prompt) + EOS_TOKEN
         texts.append(text)
-    return {
-        "text": texts,
-    }
+
+    return {"text": texts}
 
 
 DATASET_FILE = "afp_extractions_reasoning.jsonl"
@@ -86,7 +103,7 @@ model = FastLanguageModel.get_peft_model(
     lora_alpha=16,
     lora_dropout=0,
     bias="none",
-    use_gradient_checkpointing="unsloth",  # True or "unsloth" for very long context
+    use_gradient_checkpointing="unsloth",
     random_state=3407,
     use_rslora=False,
     loftq_config=None,
