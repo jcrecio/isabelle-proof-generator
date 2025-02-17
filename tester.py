@@ -315,4 +315,4 @@ while True:
         if theorem_statement == "EXIT":
             break
         response = infer_proof(theorem_statement)
-        print(response)
+        print(response[0].split("### Proof:")[1])
