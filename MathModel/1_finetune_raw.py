@@ -166,7 +166,7 @@ trainer = SFTTrainer(
 
 trainer.train()
 
-trainer.model.save_pretrained("jcrecio/Isamath-v0.1")
+trainer.model.save_pretrained("jcrecio/Isamath-v0.1-raw")
 wandb.finish()
 model.config.use_cache = True
 model.eval()
