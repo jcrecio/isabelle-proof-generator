@@ -217,14 +217,7 @@ Now provide ONLY the clean Isabelle/HOL proof:
 
 
 def generate_proof(model, tokenizer, theorem):
-    # Format the prompt
-    prompt = reasoning_prompt_style.copy()
-    prompt["messages"][1][
-        "content"
-    ] = f"Please provide a proof for the following Isabelle/HOL theorem:\n{theorem}"
-
-    # Convert to string for the model
-    formatted_prompt = json.dumps(prompt)
+    formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
 
     # Generate response
     inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
@@ -233,19 +226,20 @@ def generate_proof(model, tokenizer, theorem):
         attention_mask=inputs.attention_mask,
         max_new_tokens=1200,
         use_cache=True,
+        temperature=0.7,  # Adjust based on needed creativity vs. consistency
+        top_p=0.95,
     )
 
-    # Decode and parse response
-    raw_response = tokenizer.batch_decode(outputs)[0]
-    try:
-        # Parse the JSON response
-        response_json = json.loads(raw_response.split(EOS_TOKEN)[0])
-        # Extract the assistant's response
-        thinking = response_json["messages"][2]["thinking"]
-        proof = response_json["messages"][2]["proof"]
-        return {"thinking": thinking, "proof": proof}
-    except json.JSONDecodeError:
-        return {"error": "Failed to parse model output", "raw_response": raw_response}
+    # Decode and clean the response
+    response = tokenizer.batch_decode(outputs)[0]
+
+    # Extract only the proof part (after the last prompt section)
+    proof = response.split("Now provide ONLY the clean Isabelle/HOL proof:")[-1].strip()
+
+    # Clean up any remaining prompt artifacts or thinking sections
+    proof = proof.replace("<think>", "").replace("</think>", "").strip()
+
+    return proof
 
 
 def infer_proof(theorem_statement, device="cuda"):
@@ -308,5 +302,5 @@ while True:
         theorem_statement = input("Please enter the theorem statement:")
         if theorem_statement == "EXIT":
             break
-        response = infer_proof(theorem_statement)
+        response = generate_proof(MODEL, TOKENIZER, theorem_statement)
         print(response)
