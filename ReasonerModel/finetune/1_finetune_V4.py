@@ -73,7 +73,7 @@ EOS_TOKEN = tokenizer.eos_token  # Must add EOS_TOKEN
 
 
 def formatting_prompts_func(examples):
-    theorems = examples["theorem"]
+    theorems = examples["theorem_statement"]
     reasoning = examples["reasoning"]
     proofs = examples["proof"]
     texts = []
