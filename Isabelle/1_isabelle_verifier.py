@@ -490,7 +490,7 @@ def load_model():
 
         model, tokenizer = FastLanguageModel.from_pretrained(
             base_model_name,
-            base_model_name=4096,
+            max_seq_length=4096,
             dtype=None,  # Uses bfloat16 if available, else float16
             load_in_4bit=True,  # Enable 4-bit quantization
         )
