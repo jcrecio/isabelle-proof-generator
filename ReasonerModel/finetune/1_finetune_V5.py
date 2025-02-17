@@ -17,7 +17,7 @@ login(hf_token)
 
 WITH_CONTEXT = os.getenv("WITH_CONTEXT")
 
-new_model_local = "jcrecio/Remath-v0.4"
+new_model_local = "jcrecio/Remath-v0.5"
 wandb.login(key=wandb_token)
 run = wandb.init(
     project="Remath-v0.4",
@@ -32,7 +32,7 @@ load_in_4bit = True
 
 
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name="unsloth/DeepSeek-R1-Distill-Llama-8B",
+    model_name="unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF",
     max_seq_length=max_seq_length,
     dtype=dtype,
     load_in_4bit=load_in_4bit,
