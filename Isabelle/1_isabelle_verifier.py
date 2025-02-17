@@ -453,7 +453,6 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
 
 WITH_RAG = False
-PROMPT_STYLE = "Math"
 
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
@@ -466,18 +465,17 @@ def load_model():
         )
         exit
 
-    print(sys.argv[0])
-    print(sys.argv[1])
-    print(sys.argv[2])
-    print(sys.argv[3])
-    print(sys.argv[4])
-    print(sys.argv[5])
+    print("0", sys.argv[0])
+    print("1", sys.argv[1])
+    print("2", sys.argv[2])
+    print("3", sys.argv[3])
+    print("4", sys.argv[4])
+    print("5", sys.argv[5])
 
     UNSLOTH = True if sys.argv[1] == "True" else False
     BASE_ONLY = True if sys.argv[2] == "True" else False
     base_model_name = sys.argv[3]
     model_name = sys.argv[4]
-    PROMPT_STYLE = sys.argv[5]
 
     if UNSLOTH:
         from langchain.docstore.document import Document as LangchainDocument
@@ -535,6 +533,7 @@ Infer a proof for the following Isabelle/HOL theorem statement.
 
 
 def infer_proof(theorem_statement, device="cuda"):
+    PROMPT_STYLE = sys.argv[5]
     prompt_to_use = (
         math_prompt_style if PROMPT_STYLE == "Math" else reasoning_prompt_style
     )
