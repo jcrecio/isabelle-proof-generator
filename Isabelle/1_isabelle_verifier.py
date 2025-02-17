@@ -452,7 +452,6 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
             log(f"Error details: {result[1]}", file=sys.stderr)
 
 
-WITH_CONTEXT = False
 WITH_RAG = False
 PROMPT_STYLE = "Math"
 
@@ -467,11 +466,18 @@ def load_model():
         )
         exit
 
+    print(sys.argv[0])
+    print(sys.argv[1])
+    print(sys.argv[2])
+    print(sys.argv[3])
+    print(sys.argv[4])
+    print(sys.argv[5])
+
+    UNSLOTH = True if sys.argv[1] == "True" else False
     BASE_ONLY = True if sys.argv[2] == "True" else False
     base_model_name = sys.argv[3]
     model_name = sys.argv[4]
     PROMPT_STYLE = sys.argv[5]
-    UNSLOTH = True if sys.argv[1] == "True" else False
 
     if UNSLOTH:
         from langchain.docstore.document import Document as LangchainDocument
@@ -508,9 +514,8 @@ def load_model():
 
 
 math_prompt_style = """
-You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. 
-You are going to receive instructions of what you need to infer, and you will also receive some context and the corresponding problem, theorem statement or lemma. When you answer, please do it reasoning step by step.
-[INST]Infer a proof for the following Isabelle/HOL lemma: {}. Answer only with a Isabelle/HOL proof. [/INST]
+You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL.
+[INST]Infer a proof for the following Isabelle/HOL lemma: {}. Answer only with an Isabelle/HOL proof.[/INST]
 {}
 """
 
@@ -521,24 +526,6 @@ Before answering, think carefully about the question and create a step-by-step c
 ### Instruction:
 You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
 Infer a proof for the following Isabelle/HOL theorem statement.
-
-### Theorem statement:
-{}
-
-### Proof:
-<think>{}"""
-
-
-reasoning_prompt_style_with_context = """Below is an instruction that describes a task, paired with an input that provides further context.
-Write a response that appropriately completes the request.
-Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
-
-### Instruction:
-You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
-Infer a proof for the following Isabelle/HOL theorem statement.
-
-### Context:
-{}
 
 ### Theorem statement:
 {}
@@ -587,22 +574,6 @@ def infer_proof(theorem_statement, device="cuda"):
         )
         response = TOKENIZER.batch_decode(outputs)
         return response
-
-
-def infer_proof_with_context(context, theorem_statement, device="cuda"):
-    inputs = TOKENIZER(
-        [reasoning_prompt_style_with_context.format(context, theorem_statement, "")],
-        return_tensors="pt",
-    ).to(device)
-
-    outputs = MODEL.generate(
-        input_ids=inputs.input_ids,
-        attention_mask=inputs.attention_mask,
-        max_new_tokens=4096,
-        use_cache=True,
-    )
-    response = TOKENIZER.batch_decode(outputs)
-    return response
 
 
 MODEL, TOKENIZER = load_model()
