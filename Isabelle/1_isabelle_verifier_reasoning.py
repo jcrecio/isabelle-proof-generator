@@ -508,42 +508,42 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         result = verify_isabelle_session(
                             f"{afp_extractions_original}/thys/{session_name}"
                         )
-                    if result[0] is False:
-                        failures += 1
-                        log(
-                            """
-                            <span style="color: red">Failing Isabelle/HOL proof.<br>
-                            Error details: <br>
-                            <div style="font-style: italic;">{result[1]}</div><br>
-                            """,
-                            file=log_file,
-                        )
-                        log(
-                            f"""
-                            Until this moment...<br>Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
-                            """,
-                            file=log_file,
-                        )
-                        log(
-                            f"""
-                            Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
-                            """,
-                            file=log_file,
-                        )
-                    else:
-                        log(
-                            """
-                            <span style="color: green">Successful Isabelle/HOL proof.<br>
-                            """,
-                            file=log_file,
-                        )
-                        successes += 1
-                        log(
-                            f"""
-                            Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
-                            """,
-                            file=log_file,
-                        )
+                        if result[0] is False:
+                            failures += 1
+                            log(
+                                f"""
+                                <span style="color: red">Failing Isabelle/HOL proof.</span><br>
+                                Error details: <br>
+                                <div style="font-style: italic;">{result[1]}</div><br>
+                                """,
+                                file=log_file,
+                            )
+                            log(
+                                f"""
+                                Until this moment...<br>Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                                """,
+                                file=log_file,
+                            )
+                            log(
+                                f"""
+                                Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                                """,
+                                file=log_file,
+                            )
+                        else:
+                            log(
+                                """
+                                <span style="color: green">Successful Isabelle/HOL proof.<br>
+                                """,
+                                file=log_file,
+                            )
+                            successes += 1
+                            log(
+                                f"""
+                                Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                                """,
+                                file=log_file,
+                            )
 
 
 def load_model():
