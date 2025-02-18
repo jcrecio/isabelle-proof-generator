@@ -57,6 +57,27 @@ END_TEMPLATE = """
 </html>
 """
 
+WITH_RAG = False
+
+EMBEDDING_MODEL_NAME = "thenlper/gte-large"
+
+
+reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
+
+Theorem: {theorem}
+
+Think through the proof strategy:
+<think>
+Consider the theorem structure
+Plan the proof approach
+Identify necessary tactics and methods
+</think>
+
+Now provide ONLY the clean Isabelle/HOL proof:
+"""
+
+model_to_load = sys.argv[1]
+
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
@@ -447,8 +468,8 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     for lemma_index, (lemma, ground_proof) in enumerate(
                         lemmas_and_proofs
                     ):
-                        log("<hr><hr>", file=log_file)
-                        log(f"Processing lemma: <b>{lemma}</b><br>", file=log_file)
+                        log("<hr><hr><hr><hr>", file=log_file)
+                        log(f"<h2>{lemma}</h2><br>", file=log_file)
 
                         original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                         backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
@@ -456,7 +477,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
                         log(
-                            f"Ground proof: <br><pre><code>{ground_proof}</code></pre>",
+                            f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
                             file=log_file,
                         )
                         log(
@@ -489,41 +510,40 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         )
                     if result[0] is False:
                         failures += 1
-                        log("NOT VALID ISABELLE PROOF!!<br>", file=log_file)
-                        log(f"Error details: {result[1]}<br>", file=log_file)
+                        log(
+                            """
+                            <span style="color: red">Failing Isabelle/HOL proof.<br>
+                            Error details: <br>
+                            <div style="font-style: italic;">{result[1]}</div><br>
+                            """,
+                            file=log_file,
+                        )
+                        log(
+                            f"""
+                            Until this moment...<br>Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                            """,
+                            file=log_file,
+                        )
+                        log(
+                            f"""
+                            Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                            """,
+                            file=log_file,
+                        )
                     else:
-                        log("Successful ISABELLE/HOL proof!!<br>", file=log_file)
+                        log(
+                            """
+                            <span style="color: green">Successful Isabelle/HOL proof.<br>
+                            """,
+                            file=log_file,
+                        )
                         successes += 1
-                    print(
-                        f"Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>",
-                        file=log_file,
-                    )
-                    log(
-                        f"Successes: {successes} Failures: {failures}<br>",
-                        file=log_file,
-                    )
-
-
-WITH_RAG = False
-
-EMBEDDING_MODEL_NAME = "thenlper/gte-large"
-
-
-reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
-
-Theorem: {theorem}
-
-Think through the proof strategy:
-<think>
-Consider the theorem structure
-Plan the proof approach
-Identify necessary tactics and methods
-</think>
-
-Now provide ONLY the clean Isabelle/HOL proof:
-"""
-
-model_to_load = sys.argv[1]
+                        log(
+                            f"""
+                            Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                            """,
+                            file=log_file,
+                        )
 
 
 def load_model():
