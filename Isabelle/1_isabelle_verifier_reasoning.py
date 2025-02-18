@@ -453,14 +453,11 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                         backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
                         theory_content = read_file(original_theory_file)
-                        generated_proof = generate_proof(MODEL, TOKENIZER, lemma)[0]
+                        generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
                         log(
                             f"Ground proof: <br><pre><code>{ground_proof}</code></pre>",
                             file=log_file,
-                        )
-                        print(
-                            f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>",
                         )
                         log(
                             f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>",
@@ -498,7 +495,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         log("Successful ISABELLE/HOL proof!!<br>", file=log_file)
                         successes += 1
                     print(
-                        f"Successes: {successes} Failures: {failures}<br>",
+                        f"Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>",
                         file=log_file,
                     )
                     log(
@@ -537,22 +534,6 @@ def load_model():
         load_in_4bit=True,
     )
 
-    # base_model_path = f"{model_to_load}/base"
-    # model, tokenizer = FastLanguageModel.from_pretrained(
-    #     base_model_path,
-    #     max_seq_length=4096,
-    #     dtype=None,  # Uses bfloat16 if available, else float16
-    #     load_in_4bit=True,  # Enable 4-bit quantization
-    # )
-
-    # lora_path = f"{model_to_load}/lora"
-    # peft_config = PeftConfig.from_pretrained(lora_path)
-    # peft_config.r = 16
-    # model = FastLanguageModel.get_peft_model(
-    #     model,
-    #     lora_path,
-    # )
-
     FastLanguageModel.for_inference(model)
     return model, tokenizer
 
@@ -573,9 +554,6 @@ Now provide ONLY the clean Isabelle/HOL proof:
 
 
 def generate_proof(model, tokenizer, theorem):
-    print("THEOREM QUE LE LLEGA")
-    print(theorem)
-    print("\n\n\n\n\n")
     formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
     inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
     outputs = model.generate(
