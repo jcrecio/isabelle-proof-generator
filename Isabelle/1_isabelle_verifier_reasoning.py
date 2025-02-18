@@ -447,7 +447,8 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     for lemma_index, (lemma, ground_proof) in enumerate(
                         lemmas_and_proofs
                     ):
-                        log(f"Processing lemma: <b>{lemma}</b><br>")
+                        log("<hr><hr>", file=log_file)
+                        log(f"Processing lemma: <b>{lemma}</b><br>", file=log_file)
 
                         original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                         backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
@@ -457,6 +458,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         log(
                             f"Ground proof: <br><pre><code>{ground_proof}</code></pre>",
                             file=log_file,
+                        )
+                        print(
+                            f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>",
                         )
                         log(
                             f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>",
@@ -493,6 +497,10 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     else:
                         log("Successful ISABELLE/HOL proof!!<br>", file=log_file)
                         successes += 1
+                    print(
+                        f"Successes: {successes} Failures: {failures}<br>",
+                        file=log_file,
+                    )
                     log(
                         f"Successes: {successes} Failures: {failures}<br>",
                         file=log_file,
@@ -570,10 +578,10 @@ def generate_proof(model, tokenizer, theorem):
     outputs = model.generate(
         input_ids=inputs.input_ids,
         attention_mask=inputs.attention_mask,
-        max_new_tokens=1200,
-        use_cache=True,
-        temperature=0.7,
-        top_p=0.95,
+        max_new_tokens=4096,
+        # use_cache=True,
+        # temperature=0.7,
+        # top_p=0.95,
     )
 
     response = tokenizer.batch_decode(outputs)[0]
