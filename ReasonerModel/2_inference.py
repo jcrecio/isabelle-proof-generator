@@ -126,8 +126,8 @@ def load_model():
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_to_load,
         max_seq_length=4096,
-        dtype=None,  # Uses bfloat16 if available, else float16
-        load_in_4bit=True,  # Enable 4-bit quantization
+        dtype=None,
+        load_in_4bit=True,
     )
 
     # base_model_path = f"{model_to_load}/base"
@@ -167,7 +167,6 @@ Now provide ONLY the clean Isabelle/HOL proof:
 
 def generate_proof(model, tokenizer, theorem):
     formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
-
     inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
     outputs = model.generate(
         input_ids=inputs.input_ids,
@@ -181,7 +180,12 @@ def generate_proof(model, tokenizer, theorem):
     response = tokenizer.batch_decode(outputs)[0]
 
     proof = response.split("Now provide ONLY the clean Isabelle/HOL proof:")[-1].strip()
-    proof = proof.replace("<think>", "").replace("</think>", "").strip()
+    proof = (
+        proof.replace("<think>", "")
+        .replace("</think>", "")
+        .replace("<｜end▁of▁sentence｜>", "")
+        .strip()
+    )
 
     return proof
 

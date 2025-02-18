@@ -29,6 +29,7 @@ import torch
 import pickle
 from huggingface_hub import login
 from dotenv import load_dotenv
+from unsloth import FastLanguageModel
 
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
@@ -359,7 +360,7 @@ def extract_theory_name(extractions_file_name, prefix=None):
         else:
             return pre_ground.split("_")[-1]
 
-    except Exception as _:
+    except Exception:
         return None
 
 
@@ -367,20 +368,20 @@ KNOWLEDGE_VECTOR_DATABASE = None
 embedding_model = None
 
 
-def load_rag():
-    repo_id = "jcrecio/afp_rag"
+# def load_rag():
+#     repo_id = "jcrecio/afp_rag"
 
-    faiss_path = hf_hub_download(repo_id=repo_id, filename="index.faiss")
-    pkl_path = hf_hub_download(repo_id=repo_id, filename="index.pkl")
+#     faiss_path = hf_hub_download(repo_id=repo_id, filename="index.faiss")
+#     pkl_path = hf_hub_download(repo_id=repo_id, filename="index.pkl")
 
-    with open(pkl_path, "rb") as f:
-        index_metadata = pickle.load(f)
+#     with open(pkl_path, "rb") as f:
+#         index_metadata = pickle.load(f)
 
-    embedding_model = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
-    # KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
-    KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local(faiss_path, embedding_model)
+#     embedding_model = HuggingFaceEmbeddings(
+#         model_name="sentence-transformers/all-MiniLM-L6-v2"
+#     )
+#     # KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
+#     KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local(faiss_path, embedding_model)
 
 
 def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
@@ -416,7 +417,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                     backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
                     theory_content = read_file(original_theory_file)
-                    generated_proof = infer_proof(lemma)[0]
+                    generated_proof = generate_proof(MODEL, TOKENIZER, lemma)[0]
 
                     print(f"<b>Ground proof:</b><pre><code>{ground_proof}</code></pre>")
                     print(
@@ -461,65 +462,50 @@ WITH_RAG = False
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
-def load_model():
-    if len(sys.argv) != 5:
-        print("Run the programm as follows: \n")
-        print(
-            "python 1_isabelle_verifier.py UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing)"
-        )
-        exit
+reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
 
-    print("0", sys.argv[0])
-    print("1", sys.argv[1])
-    print("2", sys.argv[2])
-    print("3", sys.argv[3])
-    print("4", sys.argv[4])
-    print("5", sys.argv[5])
+Theorem: {theorem}
 
-    UNSLOTH = True if sys.argv[1] == "True" else False
-    BASE_ONLY = True if sys.argv[2] == "True" else False
-    base_model_name = sys.argv[3]
-    model_name = sys.argv[4]
+Think through the proof strategy:
+<think>
+Consider the theorem structure
+Plan the proof approach
+Identify necessary tactics and methods
+</think>
 
-    if UNSLOTH:
-        from langchain.docstore.document import Document as LangchainDocument
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
-        from langchain.vectorstores import FAISS
-        from langchain.embeddings import HuggingFaceEmbeddings
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from unsloth import FastLanguageModel
-
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            base_model_name,
-            max_seq_length=4096,
-            dtype=None,  # Uses bfloat16 if available, else float16
-            load_in_4bit=True,  # Enable 4-bit quantization
-        )
-        FastLanguageModel.for_inference(model)
-        return model, tokenizer
-    else:
-        base_model_name = base_model_name
-        base_model = AutoModelForCausalLM.from_pretrained(
-            base_model_name,
-            device_map="auto",
-            torch_dtype=torch.float16,
-            token=hf_token,
-        )
-        tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-        if BASE_ONLY:
-            return base_model, tokenizer
-
-        adapter_path = model_name
-        model = PeftModel.from_pretrained(base_model, adapter_path)
-        return model, tokenizer
-
-
-math_prompt_style = """
-You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL.
-[INST]Infer a proof for the following Isabelle/HOL lemma: {}. Answer only with an Isabelle/HOL proof.[/INST]
-{}
+Now provide ONLY the clean Isabelle/HOL proof:
 """
+
+model_to_load = sys.argv[1]
+
+
+def load_model():
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_to_load,
+        max_seq_length=4096,
+        dtype=None,
+        load_in_4bit=True,
+    )
+
+    # base_model_path = f"{model_to_load}/base"
+    # model, tokenizer = FastLanguageModel.from_pretrained(
+    #     base_model_path,
+    #     max_seq_length=4096,
+    #     dtype=None,  # Uses bfloat16 if available, else float16
+    #     load_in_4bit=True,  # Enable 4-bit quantization
+    # )
+
+    # lora_path = f"{model_to_load}/lora"
+    # peft_config = PeftConfig.from_pretrained(lora_path)
+    # peft_config.r = 16
+    # model = FastLanguageModel.get_peft_model(
+    #     model,
+    #     lora_path,
+    # )
+
+    FastLanguageModel.for_inference(model)
+    return model, tokenizer
+
 
 reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
 
@@ -536,47 +522,29 @@ Now provide ONLY the clean Isabelle/HOL proof:
 """
 
 
-def infer_proof(theorem_statement, device="cuda"):
-    PROMPT_STYLE = sys.argv[5]
-    prompt_to_use = (
-        math_prompt_style if PROMPT_STYLE == "Math" else reasoning_prompt_style
+def generate_proof(model, tokenizer, theorem):
+    formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
+    inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
+    outputs = model.generate(
+        input_ids=inputs.input_ids,
+        attention_mask=inputs.attention_mask,
+        max_new_tokens=1200,
+        use_cache=True,
+        temperature=0.7,
+        top_p=0.95,
     )
 
-    if WITH_RAG:
-        load_rag()
+    response = tokenizer.batch_decode(outputs)[0]
 
-        prompt_to_use = (
-            math_prompt_style if PROMPT_STYLE == "Math" else reasoning_prompt_style
-        )
+    proof = response.split("Now provide ONLY the clean Isabelle/HOL proof:")[-1].strip()
+    proof = (
+        proof.replace("<think>", "")
+        .replace("</think>", "")
+        .replace("<｜end▁of▁sentence｜>", "")
+        .strip()
+    )
 
-        math_prompt_style
-        inputs = TOKENIZER(
-            [prompt_to_use.format(theorem_statement, "")],
-            return_tensors="pt",
-        ).to(device)
-
-        outputs = MODEL.generate(
-            input_ids=inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            max_new_tokens=4096,
-            use_cache=True,
-        )
-        response = TOKENIZER.batch_decode(outputs)
-        return response
-    else:
-        inputs = TOKENIZER(
-            [prompt_to_use.format(theorem_statement, "")],
-            return_tensors="pt",
-        ).to(device)
-
-        outputs = MODEL.generate(
-            input_ids=inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            max_new_tokens=4096,
-            use_cache=True,
-        )
-        response = TOKENIZER.batch_decode(outputs)
-        return response
+    return proof
 
 
 MODEL, TOKENIZER = load_model()
