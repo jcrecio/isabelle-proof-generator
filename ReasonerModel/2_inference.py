@@ -36,6 +36,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores.utils import DistanceStrategy
 from unsloth import FastLanguageModel
+from peft import PeftConfig
 
 model_to_load = sys.argv[1]
 
@@ -138,6 +139,8 @@ def load_model():
     )
 
     lora_path = f"{model_to_load}/lora"
+    peft_config = PeftConfig.from_pretrained(lora_path)
+    peft_config.r = 16
     model = FastLanguageModel.get_peft_model(
         model,
         lora_path,
