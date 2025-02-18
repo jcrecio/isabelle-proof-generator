@@ -31,11 +31,38 @@ from huggingface_hub import login
 from dotenv import load_dotenv
 from unsloth import FastLanguageModel
 
+BEGIN_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Formatting</title>
+    <style>
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word; 
+            overflow-x: auto;
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+"""
+
+END_TEMPLATE = """
+</body>
+</html>
+"""
+
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
 VERBOSE = True
+LOG_TIME = False
 ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
@@ -57,8 +84,11 @@ def log(
         return
     message = sep.join(str(value) for value in values)
 
-    timestamp = f"[{datetime.now()}]" if with_time else ""
-    formatted_message = f"{timestamp} {message}"
+    if LOG_TIME:
+        timestamp = f"[{datetime.now()}]" if with_time else ""
+        formatted_message = f"{timestamp} {message}"
+    else:
+        formatted_message = message
 
     output_file = file if file is not None else sys.stdout
 
@@ -154,7 +184,7 @@ def read_file(file_path: str) -> Optional[str]:
         with open(file_path, "r") as file:
             return file.read()
     except Exception as e:
-        print(f"Error reading file: {e}")
+        log(f"Error reading file: {e}")
         return None
 
 
@@ -194,6 +224,7 @@ def verify_isabelle_session(project_folder: str):
 
     log("<br>")
     log(f"<b>Verifying Isabelle project... {project_folder.split('/')[-1]}</b>")
+    log("<br>")
     output = run_command_with_output(command)
     if "error" in output[1]:
         return [False, output[1]]
@@ -340,7 +371,7 @@ def create_text_file(filename, content):
             file.write(content)
         return True
     except Exception as e:
-        print(f"Error creating file: {e}")
+        log(f"Error creating file: {e}")
         return False
 
 
@@ -385,76 +416,87 @@ embedding_model = None
 
 
 def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
-    sessions = get_subfolders(afp_extractions_folder)
+    with open("logfile.html", "a") as log_file:
+        log(BEGIN_TEMPLATE, file=log_file)
+        sessions = get_subfolders(afp_extractions_folder)
 
-    successes = 0
-    failures = 0
+        successes = 0
+        failures = 0
 
-    for session in sessions:
-        session_name = session.split("/")[-1]
-        theory_files = get_files_in_folder(session)
-        for theory_file in theory_files:
-            theory_name = extract_theory_name(
-                theory_file.split("/")[-1], session.split("/")[-1]
-            )
-            original_theory_file = (
-                f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
-            )
-
-            if not os.path.exists(original_theory_file):
-                log(f"Original theory not found: {original_theory_file}")
-            else:
-                log(
-                    "***********************************************************************"
+        for session in sessions:
+            session_name = session.split("/")[-1]
+            theory_files = get_files_in_folder(session)
+            for theory_file in theory_files:
+                theory_name = extract_theory_name(
+                    theory_file.split("/")[-1], session.split("/")[-1]
                 )
-                log(f"Processing theory: {theory_file}")
-                log("\n")
+                original_theory_file = (
+                    f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
+                )
 
-                lemmas_and_proofs = get_lemmas_proofs_for_file(theory_file)
-                for lemma_index, (lemma, ground_proof) in enumerate(lemmas_and_proofs):
-                    log(f"Processing lemma: {lemma}")
-
-                    original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
-                    backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
-                    theory_content = read_file(original_theory_file)
-                    generated_proof = generate_proof(MODEL, TOKENIZER, lemma)[0]
-
-                    print(f"<b>Ground proof:</b><pre><code>{ground_proof}</code></pre>")
-                    print(
-                        f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>"
+                if not os.path.exists(original_theory_file):
+                    log(
+                        f"Original theory not found: {original_theory_file}<br>",
+                        file=log_file,
                     )
-                    # generated_proof_without_tags = generated_proof.replace(
-                    #     "['<｜begin▁of▁sentence｜>", ""
-                    # ).replace("['<｜end▁of▁sentence｜>", "")
-
-                    new_theory_content = theory_content.replace(
-                        ground_proof, generated_proof
-                    )
-                    next_lemma = None
-                    if (lemma_index + 1) < len(lemmas_and_proofs):
-                        next_lemma = lemmas_and_proofs[lemma_index + 1][0]
-                    new_theory_content = replace_lemma_proof(
-                        theory_content, lemma, next_lemma, generated_proof
-                    )
-                    if new_theory_content is None:
-                        continue
-
-                    _ = shutil.move(original_theory_file, backup_original_theory_file)
-                    create_text_file(original_theory_file, new_theory_content)
-
-                    result = verify_isabelle_session(
-                        f"{afp_extractions_original}/thys/{session_name}"
-                    )
-                if result[0] is False:
-                    failures += 1
-                    log("NOT VALID ISABELLE PROOF!!")
-                    log(f"Error details: {result[1]}", file=sys.stderr)
                 else:
-                    log("Successful ISABELLE/HOL proof!!")
-                    successes += 1
-                log(
-                    "***********************************************************************"
-                )
+                    log(f"Processing theory: {theory_file}<br>", file=log_file)
+                    log("<br>", file=log_file)
+
+                    lemmas_and_proofs = get_lemmas_proofs_for_file(theory_file)
+                    for lemma_index, (lemma, ground_proof) in enumerate(
+                        lemmas_and_proofs
+                    ):
+                        log(f"Processing lemma: <b>{lemma}</b><br>")
+
+                        original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
+                        backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
+                        theory_content = read_file(original_theory_file)
+                        generated_proof = generate_proof(MODEL, TOKENIZER, lemma)[0]
+
+                        log(
+                            f"Ground proof: <br><pre><code>{ground_proof}</code></pre>",
+                            file=log_file,
+                        )
+                        log(
+                            f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>",
+                            file=log_file,
+                        )
+                        # generated_proof_without_tags = generated_proof.replace(
+                        #     "['<｜begin▁of▁sentence｜>", ""
+                        # ).replace("['<｜end▁of▁sentence｜>", "")
+
+                        new_theory_content = theory_content.replace(
+                            ground_proof, generated_proof
+                        )
+                        next_lemma = None
+                        if (lemma_index + 1) < len(lemmas_and_proofs):
+                            next_lemma = lemmas_and_proofs[lemma_index + 1][0]
+                        new_theory_content = replace_lemma_proof(
+                            theory_content, lemma, next_lemma, generated_proof
+                        )
+                        if new_theory_content is None:
+                            continue
+
+                        _ = shutil.move(
+                            original_theory_file, backup_original_theory_file
+                        )
+                        create_text_file(original_theory_file, new_theory_content)
+
+                        result = verify_isabelle_session(
+                            f"{afp_extractions_original}/thys/{session_name}"
+                        )
+                    if result[0] is False:
+                        failures += 1
+                        log("NOT VALID ISABELLE PROOF!!<br>", file=log_file)
+                        log(f"Error details: {result[1]}<br>", file=log_file)
+                    else:
+                        log("Successful ISABELLE/HOL proof!!<br>", file=log_file)
+                        successes += 1
+                    log(
+                        f"Successes: {successes} Failures: {failures}<br>",
+                        file=log_file,
+                    )
 
 
 WITH_RAG = False
