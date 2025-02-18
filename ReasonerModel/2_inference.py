@@ -122,11 +122,25 @@ def run_command_with_output(command, execution_dir=None, timeout=None):
 
 
 def load_model():
+    # model, tokenizer = FastLanguageModel.from_pretrained(
+    #     model_to_load,
+    #     max_seq_length=4096,
+    #     dtype=None,  # Uses bfloat16 if available, else float16
+    #     load_in_4bit=True,  # Enable 4-bit quantization
+    # )
+
+    base_model_path = f"{model_to_load}/base"
     model, tokenizer = FastLanguageModel.from_pretrained(
-        model_to_load,
+        base_model_path,
         max_seq_length=4096,
         dtype=None,  # Uses bfloat16 if available, else float16
         load_in_4bit=True,  # Enable 4-bit quantization
+    )
+
+    lora_path = f"{model_to_load}/lora"
+    model = FastLanguageModel.get_peft_model(
+        model,
+        lora_path,
     )
 
     FastLanguageModel.for_inference(model)
