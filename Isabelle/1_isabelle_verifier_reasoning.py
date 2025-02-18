@@ -532,7 +532,7 @@ model_to_load = sys.argv[1]
 def load_model():
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_to_load,
-        max_seq_length=4096,
+        max_seq_length=1200,
         dtype=None,
         load_in_4bit=True,
     )
