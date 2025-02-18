@@ -573,15 +573,18 @@ Now provide ONLY the clean Isabelle/HOL proof:
 
 
 def generate_proof(model, tokenizer, theorem):
+    print("THEOREM QUE LE LLEGA")
+    print(theorem)
+    print("\n\n\n\n\n")
     formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
     inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
     outputs = model.generate(
         input_ids=inputs.input_ids,
         attention_mask=inputs.attention_mask,
-        max_new_tokens=4096,
-        # use_cache=True,
-        # temperature=0.7,
-        # top_p=0.95,
+        max_new_tokens=1200,
+        use_cache=True,
+        temperature=0.7,
+        top_p=0.95,
     )
 
     response = tokenizer.batch_decode(outputs)[0]
