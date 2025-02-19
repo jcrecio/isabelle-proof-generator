@@ -22,7 +22,7 @@ login(hf_token)
 
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project=new_model_local,
+    project=sys.argv[1],
     job_type="training",
     anonymous="allow",
 )
