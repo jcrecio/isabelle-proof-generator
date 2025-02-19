@@ -581,10 +581,13 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             )
 
 
+max_seq_length = 2048
+
+
 def load_model():
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_to_load,
-        max_seq_length=1200,
+        max_seq_length=2048,
         dtype=None,
         load_in_4bit=True,
     )
