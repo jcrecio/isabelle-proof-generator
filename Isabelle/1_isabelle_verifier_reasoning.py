@@ -518,6 +518,12 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             result = verify_isabelle_session(
                                 f"{afp_extractions_original}/thys/{session_name}"
                             )
+
+                            # Clean isabelle theory files after verification
+                            _ = shutil.remove(original_theory_file)
+                            _ = shutil.move(
+                                backup_original_theory_file, original_theory_file
+                            )
                             if result[0] is False:
                                 failures += 1
                                 log(
