@@ -45,10 +45,12 @@ train_prompt_style = {
     "messages": [
         {
             "role": "system",
-            "content": "You are an expert in Isabelle/HOL proof generation. Given a theorem statement, you will think through the proof strategy and then provide a clean, valid Isabelle/HOL proof.",
+            "content": "You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. When you answer, please do it reasoning step by step.",
         },
-        {"role": "user", "content": "Theorem: {theorem}"},
-        {"role": "assistant", "thinking": "{reasoning}", "output": "proof"},
+        {
+            "role": "user",
+            "content": "Infer a proof for the following Isabelle/HOL theorem statement/s: {theorem_statement}",
+        },
         {"role": "assistant", "content": "{proof}"},
     ]
 }
@@ -57,24 +59,36 @@ EOS_TOKEN = tokenizer.eos_token
 
 
 def formatting_prompts_func(examples):
-    theorems = examples["theorem_statement"]
-    reasonings = examples["reasoning"]
-    proofs = examples["proof"]
-    texts = []
+    formatted_prompts = []
+    for theorem, proof in zip(examples["theorem_statement"], examples["proof"]):
 
-    for theorem, reasoning, proof in zip(theorems, reasonings, proofs):
-        prompt = train_prompt_style.copy()
-        prompt["messages"][1]["content"] = f"Theorem: {theorem}"
-        prompt["messages"][2]["thinking"] = reasoning
-        prompt["messages"][3]["content"] = proof.strip()
+        conversation = [
+            {
+                "role": "system",
+                "content": "You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. When you answer, please do it ONLY with the valid Isabelle/HOL proof.",
+            },
+            {
+                "role": "user",
+                "content": f"Infer a proof for the following Isabelle/HOL theorem statement: {theorem}",
+            },
+            {"role": "assistant", "content": proof},
+        ]
 
-        text = json.dumps(prompt) + EOS_TOKEN
-        texts.append(text)
+        formatted_text = ""
+        for message in conversation:
+            if message["role"] == "system":
+                formatted_text += f"<s>[INST] {message['content']} [/INST]"
+            elif message["role"] == "user":
+                formatted_text += f"[INST] {message['content']} [/INST]"
+            else:
+                formatted_text += f"{message['content']}</s>"
 
-    return {"text": texts}
+        formatted_prompts.append(formatted_text)
+
+    return {"text": formatted_prompts}
 
 
-DATASET_FILE = "afp_extractions_reasoning.jsonl"
+DATASET_FILE = "afp_extractions.jsonl"
 
 dataset = load_dataset(
     "jcrecio/AFP_Theories",
@@ -121,6 +135,7 @@ trainer = SFTTrainer(
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
         # Use num_train_epochs = 1, warmup_ratio for full training runs!
+        num_train_epochs=5,
         warmup_steps=5,
         max_steps=60,
         learning_rate=2e-4,

@@ -43,6 +43,7 @@ BEGIN_TEMPLATE = """
             white-space: pre-wrap;
             word-wrap: break-word; 
             overflow-x: auto;
+            max-height: 400px;
             background-color: #f4f4f4;
             padding: 10px;
             border-radius: 5px;
@@ -247,7 +248,14 @@ def verify_isabelle_session(project_folder: str):
     log(f"<b>Verifying Isabelle project... {project_folder.split('/')[-1]}</b>")
     log("<br>")
     output = run_command_with_output(command)
-    if "error" in output[1]:
+    if (
+        "error" in output[1]
+        or "Error" in output[1]
+        or "Malformed" in output[1]
+        or "malformed" in output[1]
+        or "Invalid" in output[1]
+        or "invalid" in output[1]
+    ):
         return [False, output[1]]
     return [True, output[1]]
 
@@ -473,76 +481,72 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
                         original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                         backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
-                        theory_content = read_file(original_theory_file)
-                        generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
-                        log(
-                            f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
-                            file=log_file,
-                        )
-                        log(
-                            f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>",
-                            file=log_file,
-                        )
-                        # generated_proof_without_tags = generated_proof.replace(
-                        #     "['<｜begin▁of▁sentence｜>", ""
-                        # ).replace("['<｜end▁of▁sentence｜>", "")
+                        try:
+                            theory_content = read_file(original_theory_file)
+                            generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
-                        new_theory_content = theory_content.replace(
-                            ground_proof, generated_proof
-                        )
-                        next_lemma = None
-                        if (lemma_index + 1) < len(lemmas_and_proofs):
-                            next_lemma = lemmas_and_proofs[lemma_index + 1][0]
-                        new_theory_content = replace_lemma_proof(
-                            theory_content, lemma, next_lemma, generated_proof
-                        )
-                        if new_theory_content is None:
-                            continue
-
-                        _ = shutil.move(
-                            original_theory_file, backup_original_theory_file
-                        )
-                        create_text_file(original_theory_file, new_theory_content)
-
-                        result = verify_isabelle_session(
-                            f"{afp_extractions_original}/thys/{session_name}"
-                        )
-                        if result[0] is False:
-                            failures += 1
                             log(
-                                f"""
-                                <span style="color: red">Failing Isabelle/HOL proof.</span><br>
-                                Error details: <br>
-                                <div style="font-style: italic;">{result[1]}</div><br>
-                                """,
+                                f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
                                 file=log_file,
                             )
                             log(
-                                f"""
-                                Until this moment...<br>Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
-                                """,
+                                f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre><br><br>",
                                 file=log_file,
                             )
+                            # generated_proof_without_tags = generated_proof.replace(
+                            #     "['<｜begin▁of▁sentence｜>", ""
+                            # ).replace("['<｜end▁of▁sentence｜>", "")
+
+                            new_theory_content = theory_content.replace(
+                                ground_proof, generated_proof
+                            )
+                            next_lemma = None
+                            if (lemma_index + 1) < len(lemmas_and_proofs):
+                                next_lemma = lemmas_and_proofs[lemma_index + 1][0]
+                            new_theory_content = replace_lemma_proof(
+                                theory_content, lemma, next_lemma, generated_proof
+                            )
+                            if new_theory_content is None:
+                                continue
+
+                            _ = shutil.move(
+                                original_theory_file, backup_original_theory_file
+                            )
+                            create_text_file(original_theory_file, new_theory_content)
+
+                            result = verify_isabelle_session(
+                                f"{afp_extractions_original}/thys/{session_name}"
+                            )
+                            if result[0] is False:
+                                failures += 1
+                                log(
+                                    f"""
+                                    <span style="color: red">Failing Isabelle/HOL proof.</span><br>
+                                    Error details: <br>
+                                    <div style="font-style: italic;">{result[1]}</div><br>
+                                    """,
+                                    file=log_file,
+                                )
+                            else:
+                                successes += 1
+                                log(
+                                    """
+                                    <span style="color: green">Successful Isabelle/HOL proof.<br>
+                                    """,
+                                    file=log_file,
+                                )
                             log(
                                 f"""
                                 Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
                                 """,
                                 file=log_file,
                             )
-                        else:
+                        except Exception as e:
                             log(
+                                f"""
+                                <span style="color: red"> Unexpected error: {e}</span?<br>
                                 """
-                                <span style="color: green">Successful Isabelle/HOL proof.<br>
-                                """,
-                                file=log_file,
-                            )
-                            successes += 1
-                            log(
-                                f"""
-                                Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
-                                """,
-                                file=log_file,
                             )
 
 
