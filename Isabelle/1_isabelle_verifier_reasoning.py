@@ -30,6 +30,11 @@ import pickle
 from huggingface_hub import login
 from dotenv import load_dotenv
 from unsloth import FastLanguageModel
+import numpy as np
+import plotly.express as px
+import pacmap
+from langchain.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 BEGIN_TEMPLATE = """
 <!DOCTYPE html>
@@ -428,13 +433,11 @@ def extract_theory_name(extractions_file_name, prefix=None):
 
 
 KNOWLEDGE_VECTOR_DATABASE = None
+EMBEDDING_PROJECTOR = None
 embedding_model = None
 
 
 def load_rag():
-    from langchain.vectorstores import FAISS
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-
     repo_id = "jcrecio/afp_rag"
 
     faiss_path = hf_hub_download(repo_id=repo_id, filename="index.faiss")
@@ -448,7 +451,12 @@ def load_rag():
     )
     # KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
     KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local(faiss_path, embedding_model)
-    return KNOWLEDGE_VECTOR_DATABASE
+
+    EMBEDDING_PROJECTOR = pacmap.PaCMAP(
+        n_components=2, n_neighbors=None, MN_ratio=0.5, FP_ratio=2.0, random_state=1
+    )
+
+    return KNOWLEDGE_VECTOR_DATABASE, EMBEDDING_PROJECTOR
 
 
 def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
@@ -611,35 +619,55 @@ Now provide ONLY the clean Isabelle/HOL proof:
 """
 
 
+# PROMPT TO INFERENCE JSON STYLE TO PASS THE CONTEXT?
+reasoning_prompt_style_rag = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
+
+Theorem: {theorem}
+
+Think through the proof strategy:
+<think>
+Consider the theorem structure
+Plan the proof approach
+Identify necessary tactics and methods
+</think>
+
+Now provide ONLY the clean Isabelle/HOL proof:
+"""
+
+
 def generate_proof(model, tokenizer, theorem):
-
     if RAG:
-        # how to use RAG here
-        rag = "additional documents"  # TODO
+        retrieved_docs = KNOWLEDGE_VECTOR_DATABASE.similarity_search(query=theorem, k=5)
 
-    formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
-    inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
-    outputs = model.generate(
-        input_ids=inputs.input_ids,
-        attention_mask=inputs.attention_mask,
-        max_new_tokens=1200,
-        use_cache=True,
-        temperature=0.7,
-        top_p=0.95,
-    )
+    else:
+        formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
+        inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
+        outputs = model.generate(
+            input_ids=inputs.input_ids,
+            attention_mask=inputs.attention_mask,
+            max_new_tokens=1200,
+            use_cache=True,
+            temperature=0.7,
+            top_p=0.95,
+        )
 
-    response = tokenizer.batch_decode(outputs)[0]
+        response = tokenizer.batch_decode(outputs)[0]
 
-    proof = response.split("Now provide ONLY the clean Isabelle/HOL proof:")[-1].strip()
-    proof = (
-        proof.replace("<think>", "")
-        .replace("</think>", "")
-        .replace("<｜end▁of▁sentence｜>", "")
-        .strip()
-    )
+        proof = response.split("Now provide ONLY the clean Isabelle/HOL proof:")[
+            -1
+        ].strip()
+        proof = (
+            proof.replace("<think>", "")
+            .replace("</think>", "")
+            .replace("<｜end▁of▁sentence｜>", "")
+            .strip()
+        )
 
-    return proof
+        return proof
 
+
+if RAG:
+    KNOWLEDGE_VECTOR_DATABASE = load_rag()
 
 MODEL, TOKENIZER = load_model()
 verify_all_sessions(
