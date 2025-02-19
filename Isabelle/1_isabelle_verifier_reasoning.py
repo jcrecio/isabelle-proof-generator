@@ -1,4 +1,4 @@
-# How to run: python 1_isabelle_verifier.py <model>
+# How to run: python 1_isabelle_verifier.py <model> [RAG]
 
 
 import json
@@ -78,6 +78,7 @@ Now provide ONLY the clean Isabelle/HOL proof:
 """
 
 model_to_load = sys.argv[1]
+RAG = True if len(sys.argv) > 3 and sys.argv[2] == "RAG" else False
 
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
@@ -430,20 +431,24 @@ KNOWLEDGE_VECTOR_DATABASE = None
 embedding_model = None
 
 
-# def load_rag():
-#     repo_id = "jcrecio/afp_rag"
+def load_rag():
+    from langchain.vectorstores import FAISS
+    from langchain_community.embeddings import HuggingFaceEmbeddings
 
-#     faiss_path = hf_hub_download(repo_id=repo_id, filename="index.faiss")
-#     pkl_path = hf_hub_download(repo_id=repo_id, filename="index.pkl")
+    repo_id = "jcrecio/afp_rag"
 
-#     with open(pkl_path, "rb") as f:
-#         index_metadata = pickle.load(f)
+    faiss_path = hf_hub_download(repo_id=repo_id, filename="index.faiss")
+    pkl_path = hf_hub_download(repo_id=repo_id, filename="index.pkl")
 
-#     embedding_model = HuggingFaceEmbeddings(
-#         model_name="sentence-transformers/all-MiniLM-L6-v2"
-#     )
-#     # KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
-#     KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local(faiss_path, embedding_model)
+    with open(pkl_path, "rb") as f:
+        index_metadata = pickle.load(f)
+
+    embedding_model = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+    # KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
+    KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local(faiss_path, embedding_model)
+    return KNOWLEDGE_VECTOR_DATABASE
 
 
 def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
@@ -453,7 +458,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
         successes = 0
         failures = 0
-        inconclusiv
+        inconclusives = 0
 
         for session in sessions:
             session_name = session.split("/")[-1]
@@ -529,11 +534,11 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             )
 
                             if result[0] == "inconclusive":
-                                failures += 1
+                                inconclusives += 1
                                 log(
                                     f"""
                                     <div style="border:1px solid black">
-                                        <span style="color: orange; font-stye: bold">Failing Isabelle/HOL proof.</span><br>
+                                        <span style="color: orange; font-stye: bold">Inconclusive Isabelle/HOL proof.</span><br>
                                         Error details: <br>
                                         <div style="font-style: italic;">{result[1]}</div>
                                     </div><br>
@@ -545,7 +550,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 log(
                                     f"""
                                     <div style="border:1px solid black">
-                                        <span style="color: red">Failing Isabelle/HOL proof.</span><br>
+                                        <span style="color: red; font-stye: bold">Failing Isabelle/HOL proof.</span><br>
                                         Error details: <br>
                                         <div style="font-style: italic;">{result[1]}</div>
                                     </div><br>
@@ -557,7 +562,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 log(
                                     """
                                     <div style="border:1px solid black">
-                                        <span style="color: green">Successful Isabelle/HOL proof.</span>
+                                        <span style="color: green; font-stye: bold">Successful Isabelle/HOL proof.</span>
                                     </div><br>
                                     """,
                                     file=log_file,
@@ -604,6 +609,11 @@ Now provide ONLY the clean Isabelle/HOL proof:
 
 
 def generate_proof(model, tokenizer, theorem):
+
+    if RAG:
+        # how to use RAG here
+        rag = "additional documents"  # TODO
+
     formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
     inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
     outputs = model.generate(
