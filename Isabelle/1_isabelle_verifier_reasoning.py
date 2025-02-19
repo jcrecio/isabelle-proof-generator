@@ -1,4 +1,4 @@
-# How to run: python 1_isabelle_verifier.py UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing) PROMPT(MATH/REASONING)
+# How to run: python 1_isabelle_verifier.py <model>
 
 
 import json
@@ -248,6 +248,8 @@ def verify_isabelle_session(project_folder: str):
     log(f"<b>Verifying Isabelle project... {project_folder.split('/')[-1]}</b>")
     log("<br>")
     output = run_command_with_output(command)
+    if len(output) == 0 or len(output) < 2:
+        return ["inconclusive", output]
     if (
         "error" in output[1]
         or "Error" in output[1]
@@ -256,8 +258,8 @@ def verify_isabelle_session(project_folder: str):
         or "Invalid" in output[1]
         or "invalid" in output[1]
     ):
-        return [False, output[1]]
-    return [True, output[1]]
+        return ["error", output[1]]
+    return ["success", output[1]]
 
 
 def find_lemma_index_in_translations(lemma, translations):
@@ -451,6 +453,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
         successes = 0
         failures = 0
+        inconclusiv
 
         for session in sessions:
             session_name = session.split("/")[-1]
@@ -524,21 +527,38 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             _ = shutil.move(
                                 backup_original_theory_file, original_theory_file
                             )
-                            if result[0] is False:
+
+                            if result[0] == "inconclusive":
                                 failures += 1
                                 log(
                                     f"""
-                                    <span style="color: red">Failing Isabelle/HOL proof.</span><br>
-                                    Error details: <br>
-                                    <div style="font-style: italic;">{result[1]}</div><br>
+                                    <div style="border:1px solid black">
+                                        <span style="color: orange; font-stye: bold">Failing Isabelle/HOL proof.</span><br>
+                                        Error details: <br>
+                                        <div style="font-style: italic;">{result[1]}</div>
+                                    </div><br>
                                     """,
                                     file=log_file,
                                 )
-                            else:
+                            elif result[0] == "error":
+                                failures += 1
+                                log(
+                                    f"""
+                                    <div style="border:1px solid black">
+                                        <span style="color: red">Failing Isabelle/HOL proof.</span><br>
+                                        Error details: <br>
+                                        <div style="font-style: italic;">{result[1]}</div>
+                                    </div><br>
+                                    """,
+                                    file=log_file,
+                                )
+                            elif result[0] == "success":
                                 successes += 1
                                 log(
                                     """
-                                    <span style="color: green">Successful Isabelle/HOL proof.<br>
+                                    <div style="border:1px solid black">
+                                        <span style="color: green">Successful Isabelle/HOL proof.</span>
+                                    </div><br>
                                     """,
                                     file=log_file,
                                 )

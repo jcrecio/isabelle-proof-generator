@@ -1,4 +1,4 @@
-# How to run: python 1_isabelle_verifier.py UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing) PROMPT(MATH/REASONING)
+# How to run: python 1_isabelle_verifier.py <model>
 
 
 import json
@@ -29,12 +29,62 @@ import torch
 import pickle
 from huggingface_hub import login
 from dotenv import load_dotenv
+from unsloth import FastLanguageModel
+
+BEGIN_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Formatting</title>
+    <style>
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word; 
+            overflow-x: auto;
+            max-height: 400px;
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+"""
+
+END_TEMPLATE = """
+</body>
+</html>
+"""
+
+WITH_RAG = False
+
+EMBEDDING_MODEL_NAME = "thenlper/gte-large"
+
+
+reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
+
+Theorem: {theorem}
+
+Think through the proof strategy:
+<think>
+Consider the theorem structure
+Plan the proof approach
+Identify necessary tactics and methods
+</think>
+
+Now provide ONLY the clean Isabelle/HOL proof:
+"""
+
+model_to_load = sys.argv[1]
 
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
 VERBOSE = True
+LOG_TIME = False
 ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
@@ -56,8 +106,11 @@ def log(
         return
     message = sep.join(str(value) for value in values)
 
-    timestamp = f"[{datetime.now()}]" if with_time else ""
-    formatted_message = f"{timestamp} {message}"
+    if LOG_TIME:
+        timestamp = f"[{datetime.now()}]" if with_time else ""
+        formatted_message = f"{timestamp} {message}"
+    else:
+        formatted_message = message
 
     output_file = file if file is not None else sys.stdout
 
@@ -153,7 +206,7 @@ def read_file(file_path: str) -> Optional[str]:
         with open(file_path, "r") as file:
             return file.read()
     except Exception as e:
-        print(f"Error reading file: {e}")
+        log(f"Error reading file: {e}")
         return None
 
 
@@ -193,10 +246,20 @@ def verify_isabelle_session(project_folder: str):
 
     log("<br>")
     log(f"<b>Verifying Isabelle project... {project_folder.split('/')[-1]}</b>")
+    log("<br>")
     output = run_command_with_output(command)
-    if "error" in output[1]:
-        return [False, output[1]]
-    return [True, output[1]]
+    if len(output) == 0 or len(output) < 2:
+        return ["inconclusive", output]
+    if (
+        "error" in output[1]
+        or "Error" in output[1]
+        or "Malformed" in output[1]
+        or "malformed" in output[1]
+        or "Invalid" in output[1]
+        or "invalid" in output[1]
+    ):
+        return ["error", output[1]]
+    return ["success", output[1]]
 
 
 def find_lemma_index_in_translations(lemma, translations):
@@ -339,7 +402,7 @@ def create_text_file(filename, content):
             file.write(content)
         return True
     except Exception as e:
-        print(f"Error creating file: {e}")
+        log(f"Error creating file: {e}")
         return False
 
 
@@ -359,7 +422,7 @@ def extract_theory_name(extractions_file_name, prefix=None):
         else:
             return pre_ground.split("_")[-1]
 
-    except Exception as _:
+    except Exception:
         return None
 
 
@@ -367,216 +430,202 @@ KNOWLEDGE_VECTOR_DATABASE = None
 embedding_model = None
 
 
-def load_rag():
-    repo_id = "jcrecio/afp_rag"
+# def load_rag():
+#     repo_id = "jcrecio/afp_rag"
 
-    faiss_path = hf_hub_download(repo_id=repo_id, filename="index.faiss")
-    pkl_path = hf_hub_download(repo_id=repo_id, filename="index.pkl")
+#     faiss_path = hf_hub_download(repo_id=repo_id, filename="index.faiss")
+#     pkl_path = hf_hub_download(repo_id=repo_id, filename="index.pkl")
 
-    with open(pkl_path, "rb") as f:
-        index_metadata = pickle.load(f)
+#     with open(pkl_path, "rb") as f:
+#         index_metadata = pickle.load(f)
 
-    embedding_model = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
-    # KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
-    KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local(faiss_path, embedding_model)
+#     embedding_model = HuggingFaceEmbeddings(
+#         model_name="sentence-transformers/all-MiniLM-L6-v2"
+#     )
+#     # KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local("faiss_index", embedding_model)
+#     KNOWLEDGE_VECTOR_DATABASE = FAISS.load_local(faiss_path, embedding_model)
 
 
 def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
-    sessions = get_subfolders(afp_extractions_folder)
+    with open("logfile.html", "a") as log_file:
+        log(BEGIN_TEMPLATE, file=log_file)
+        sessions = get_subfolders(afp_extractions_folder)
 
-    successes = 0
-    failures = 0
+        successes = 0
+        failures = 0
+        inconclusiv
 
-    for session in sessions:
-        session_name = session.split("/")[-1]
-        theory_files = get_files_in_folder(session)
-        for theory_file in theory_files:
-            theory_name = extract_theory_name(
-                theory_file.split("/")[-1], session.split("/")[-1]
-            )
-            original_theory_file = (
-                f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
-            )
-
-            if not os.path.exists(original_theory_file):
-                log(f"Original theory not found: {original_theory_file}")
-            else:
-                log(
-                    "***********************************************************************"
+        for session in sessions:
+            session_name = session.split("/")[-1]
+            theory_files = get_files_in_folder(session)
+            for theory_file in theory_files:
+                theory_name = extract_theory_name(
+                    theory_file.split("/")[-1], session.split("/")[-1]
                 )
-                log(f"Processing theory: {theory_file}")
-                log("\n")
+                original_theory_file = (
+                    f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
+                )
 
-                lemmas_and_proofs = get_lemmas_proofs_for_file(theory_file)
-                for lemma_index, (lemma, ground_proof) in enumerate(lemmas_and_proofs):
-                    log(f"Processing lemma: {lemma}")
-
-                    original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
-                    backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
-                    theory_content = read_file(original_theory_file)
-                    generated_proof = infer_proof(lemma)[0]
-
-                    print(f"<b>Ground proof:</b><pre><code>{ground_proof}</code></pre>")
-                    print(
-                        f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre>"
+                if not os.path.exists(original_theory_file):
+                    log(
+                        f"Original theory not found: {original_theory_file}<br>",
+                        file=log_file,
                     )
-                    # generated_proof_without_tags = generated_proof.replace(
-                    #     "['<｜begin▁of▁sentence｜>", ""
-                    # ).replace("['<｜end▁of▁sentence｜>", "")
-
-                    new_theory_content = theory_content.replace(
-                        ground_proof, generated_proof
-                    )
-                    next_lemma = None
-                    if (lemma_index + 1) < len(lemmas_and_proofs):
-                        next_lemma = lemmas_and_proofs[lemma_index + 1][0]
-                    new_theory_content = replace_lemma_proof(
-                        theory_content, lemma, next_lemma, generated_proof
-                    )
-                    if new_theory_content is None:
-                        continue
-
-                    _ = shutil.move(original_theory_file, backup_original_theory_file)
-                    create_text_file(original_theory_file, new_theory_content)
-
-                    result = verify_isabelle_session(
-                        f"{afp_extractions_original}/thys/{session_name}"
-                    )
-                if result[0] is False:
-                    failures += 1
-                    log("NOT VALID ISABELLE PROOF!!")
-                    log(f"Error details: {result[1]}", file=sys.stderr)
                 else:
-                    log("Successful ISABELLE/HOL proof!!")
-                    successes += 1
-                log(
-                    "***********************************************************************"
-                )
+                    log(f"Processing theory: {theory_file}<br>", file=log_file)
+                    log("<br>", file=log_file)
 
+                    lemmas_and_proofs = get_lemmas_proofs_for_file(theory_file)
+                    for lemma_index, (lemma, ground_proof) in enumerate(
+                        lemmas_and_proofs
+                    ):
+                        log("<hr><hr><hr><hr>", file=log_file)
+                        log(f"<h2>{lemma}</h2><br>", file=log_file)
 
-WITH_RAG = False
+                        original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
+                        backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
 
-EMBEDDING_MODEL_NAME = "thenlper/gte-large"
+                        try:
+                            theory_content = read_file(original_theory_file)
+                            generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
+
+                            log(
+                                f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
+                                file=log_file,
+                            )
+                            log(
+                                f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre><br><br>",
+                                file=log_file,
+                            )
+                            # generated_proof_without_tags = generated_proof.replace(
+                            #     "['<｜begin▁of▁sentence｜>", ""
+                            # ).replace("['<｜end▁of▁sentence｜>", "")
+
+                            new_theory_content = theory_content.replace(
+                                ground_proof, generated_proof
+                            )
+                            next_lemma = None
+                            if (lemma_index + 1) < len(lemmas_and_proofs):
+                                next_lemma = lemmas_and_proofs[lemma_index + 1][0]
+                            new_theory_content = replace_lemma_proof(
+                                theory_content, lemma, next_lemma, generated_proof
+                            )
+                            if new_theory_content is None:
+                                continue
+
+                            _ = shutil.move(
+                                original_theory_file, backup_original_theory_file
+                            )
+                            create_text_file(original_theory_file, new_theory_content)
+
+                            result = verify_isabelle_session(
+                                f"{afp_extractions_original}/thys/{session_name}"
+                            )
+
+                            # Clean isabelle theory files after verification
+                            _ = shutil.remove(original_theory_file)
+                            _ = shutil.move(
+                                backup_original_theory_file, original_theory_file
+                            )
+
+                            if result[0] == "inconclusive":
+                                failures += 1
+                                log(
+                                    f"""
+                                    <div style="border:1px solid black">
+                                        <span style="color: orange; font-stye: bold">Failing Isabelle/HOL proof.</span><br>
+                                        Error details: <br>
+                                        <div style="font-style: italic;">{result[1]}</div>
+                                    </div><br>
+                                    """,
+                                    file=log_file,
+                                )
+                            elif result[0] == "error":
+                                failures += 1
+                                log(
+                                    f"""
+                                    <div style="border:1px solid black">
+                                        <span style="color: red">Failing Isabelle/HOL proof.</span><br>
+                                        Error details: <br>
+                                        <div style="font-style: italic;">{result[1]}</div>
+                                    </div><br>
+                                    """,
+                                    file=log_file,
+                                )
+                            elif result[0] == "success":
+                                successes += 1
+                                log(
+                                    """
+                                    <div style="border:1px solid black">
+                                        <span style="color: green">Successful Isabelle/HOL proof.</span>
+                                    </div><br>
+                                    """,
+                                    file=log_file,
+                                )
+                            log(
+                                f"""
+                                Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                                """,
+                                file=log_file,
+                            )
+                        except Exception as e:
+                            log(
+                                f"""
+                                <span style="color: red"> Unexpected error: {e}</span?<br>
+                                """
+                            )
 
 
 def load_model():
-    if len(sys.argv) != 5:
-        print("Run the programm as follows: \n")
-        print(
-            "python 1_isabelle_verifier.py UNSLOTH(True, False) BASE_ONLY(True, False) BASE_MODEL LORA_MODEL(N/A for nothing)"
-        )
-        exit
-
-    print("0", sys.argv[0])
-    print("1", sys.argv[1])
-    print("2", sys.argv[2])
-    print("3", sys.argv[3])
-    print("4", sys.argv[4])
-    print("5", sys.argv[5])
-
-    UNSLOTH = True if sys.argv[1] == "True" else False
-    BASE_ONLY = True if sys.argv[2] == "True" else False
-    base_model_name = sys.argv[3]
-    model_name = sys.argv[4]
-
-    if UNSLOTH:
-        from langchain.docstore.document import Document as LangchainDocument
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
-        from langchain.vectorstores import FAISS
-        from langchain.embeddings import HuggingFaceEmbeddings
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        from langchain_community.vectorstores.utils import DistanceStrategy
-        from unsloth import FastLanguageModel
-
-        model, tokenizer = FastLanguageModel.from_pretrained(
-            base_model_name,
-            max_seq_length=4096,
-            dtype=None,  # Uses bfloat16 if available, else float16
-            load_in_4bit=True,  # Enable 4-bit quantization
-        )
-        FastLanguageModel.for_inference(model)
-        return model, tokenizer
-    else:
-        base_model_name = base_model_name
-        base_model = AutoModelForCausalLM.from_pretrained(
-            base_model_name,
-            device_map="auto",
-            torch_dtype=torch.float16,
-            token=hf_token,
-        )
-        tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-        if BASE_ONLY:
-            return base_model, tokenizer
-
-        adapter_path = model_name
-        model = PeftModel.from_pretrained(base_model, adapter_path)
-        return model, tokenizer
-
-
-math_prompt_style = """
-You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL.
-[INST]Infer a proof for the following Isabelle/HOL lemma: {}. Answer only with an Isabelle/HOL proof.[/INST]
-{}
-"""
-
-reasoning_prompt_style = """Below is an instruction that describes a task, paired with an input that provides further context.
-Write a response that appropriately completes the request.
-Before answering, think carefully about the question and create a step-by-step chain of thoughts to ensure a logical and accurate response.
-
-### Instruction:
-You are now an specialized agent to infer proofs for problems, theorem statements and lemmas written in Isabelle/HOL.
-Infer a proof for the following Isabelle/HOL theorem statement. After thinking, respond only with the pure Isabelle/HOL proof.
-
-### Theorem statement:
-{}
-
-### Proof:
-<think>{}"""
-
-
-def infer_proof(theorem_statement, device="cuda"):
-    PROMPT_STYLE = sys.argv[5]
-    prompt_to_use = (
-        math_prompt_style if PROMPT_STYLE == "Math" else reasoning_prompt_style
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_to_load,
+        max_seq_length=1200,
+        dtype=None,
+        load_in_4bit=True,
     )
 
-    if WITH_RAG:
-        load_rag()
+    FastLanguageModel.for_inference(model)
+    return model, tokenizer
 
-        prompt_to_use = (
-            math_prompt_style if PROMPT_STYLE == "Math" else reasoning_prompt_style
-        )
 
-        math_prompt_style
-        inputs = TOKENIZER(
-            [prompt_to_use.format(theorem_statement, "")],
-            return_tensors="pt",
-        ).to(device)
+reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
 
-        outputs = MODEL.generate(
-            input_ids=inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            max_new_tokens=4096,
-            use_cache=True,
-        )
-        response = TOKENIZER.batch_decode(outputs)
-        return response
-    else:
-        inputs = TOKENIZER(
-            [prompt_to_use.format(theorem_statement, "")],
-            return_tensors="pt",
-        ).to(device)
+Theorem: {theorem}
 
-        outputs = MODEL.generate(
-            input_ids=inputs.input_ids,
-            attention_mask=inputs.attention_mask,
-            max_new_tokens=4096,
-            use_cache=True,
-        )
-        response = TOKENIZER.batch_decode(outputs)
-        return response
+Think through the proof strategy:
+<think>
+Consider the theorem structure
+Plan the proof approach
+Identify necessary tactics and methods
+</think>
+
+Now provide ONLY the clean Isabelle/HOL proof:
+"""
+
+
+def generate_proof(model, tokenizer, theorem):
+    formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
+    inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
+    outputs = model.generate(
+        input_ids=inputs.input_ids,
+        attention_mask=inputs.attention_mask,
+        max_new_tokens=1200,
+        use_cache=True,
+        temperature=0.7,
+        top_p=0.95,
+    )
+
+    response = tokenizer.batch_decode(outputs)[0]
+
+    proof = response.split("Now provide ONLY the clean Isabelle/HOL proof:")[-1].strip()
+    proof = (
+        proof.replace("<think>", "")
+        .replace("</think>", "")
+        .replace("<｜end▁of▁sentence｜>", "")
+        .strip()
+    )
+
+    return proof
 
 
 MODEL, TOKENIZER = load_model()

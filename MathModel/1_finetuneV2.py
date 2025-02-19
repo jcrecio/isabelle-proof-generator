@@ -12,7 +12,8 @@ from transformers import TrainingArguments
 from dotenv import load_dotenv
 
 base_model = sys.argv[1]
-new_model_local = f"""jcrecio/{sys.argv[2]}"""
+new_model_name = sys.argv[2]
+new_model_local = f"""jcrecio/{new_model_name}"""
 
 load_dotenv()
 
@@ -22,7 +23,7 @@ login(hf_token)
 
 wandb.login(key=wandb_token)
 run = wandb.init(
-    project=sys.argv[2],
+    project=new_model_name,
     job_type="training",
     anonymous="allow",
 )
