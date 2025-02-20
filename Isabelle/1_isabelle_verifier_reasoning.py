@@ -35,6 +35,9 @@ import pacmap
 from langchain.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
+GENERATE = True
+VERIFY = False
+
 BEGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -516,6 +519,12 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             theory_content = read_file(original_theory_file)
                             generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
+                            if GENERATE:
+                                with open("generated_proofs.jsonl") as f:
+                                    f.write(
+                                        f"""{ "lemma": lemma, "proof": generated_proof }\n"""
+                                    )
+
                             log(
                                 f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
                                 file=log_file,
@@ -545,9 +554,10 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             )
                             create_text_file(original_theory_file, new_theory_content)
 
-                            result = verify_isabelle_session(
-                                f"{afp_extractions_original}/thys/{session_name}"
-                            )
+                            if VERIFY:
+                                result = verify_isabelle_session(
+                                    f"{afp_extractions_original}/thys/{session_name}"
+                                )
 
                             log(
                                 f"<b>Old content:</b><pre><code>{theory_content}</code></pre><br><br>",
