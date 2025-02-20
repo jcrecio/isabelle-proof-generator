@@ -520,7 +520,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
                             if GENERATE:
-                                with open("generated_proofs.jsonl") as f:
+                                with open(
+                                    f"generated_proofs_{model_to_load}.jsonl"
+                                ) as f:
                                     f.write(
                                         f"""{ "lemma": lemma, "proof": generated_proof }\n"""
                                     )
