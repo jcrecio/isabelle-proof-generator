@@ -620,9 +620,13 @@ Now provide ONLY the clean Isabelle/HOL proof:
 
 
 # PROMPT TO INFERENCE JSON STYLE TO PASS THE CONTEXT?
-reasoning_prompt_style_rag = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
+reasoning_prompt_style_rag = """Given a theorem in Isabelle/HOL and given some related theorems with their proofs, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
 
-Theorem: {theorem}
+Context:
+{context}
+
+Theorem:
+{theorem}
 
 Think through the proof strategy:
 <think>
@@ -638,6 +642,43 @@ Now provide ONLY the clean Isabelle/HOL proof:
 def generate_proof(model, tokenizer, theorem):
     if RAG:
         retrieved_docs = KNOWLEDGE_VECTOR_DATABASE.similarity_search(query=theorem, k=5)
+        retrieved_docs_text = [
+            (doc.metadata["source"], {doc.page_content}) for doc in retrieved_docs
+        ]
+
+        context = "".join(
+            [
+                f"Theorem {str(i)}: {doc_source}\n" + doc_content
+                for i, (doc_source, doc_content) in enumerate(retrieved_docs_text)
+            ]
+        )
+
+        formatted_prompt = reasoning_prompt_style.format(
+            theorem=theorem, context=context
+        )
+        inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
+        outputs = model.generate(
+            input_ids=inputs.input_ids,
+            attention_mask=inputs.attention_mask,
+            max_new_tokens=1200,
+            use_cache=True,
+            temperature=0.7,
+            top_p=0.95,
+        )
+
+        response = tokenizer.batch_decode(outputs)[0]
+
+        proof = response.split("Now provide ONLY the clean Isabelle/HOL proof:")[
+            -1
+        ].strip()
+        proof = (
+            proof.replace("<think>", "")
+            .replace("</think>", "")
+            .replace("<｜end▁of▁sentence｜>", "")
+            .strip()
+        )
+
+        return proof
 
     else:
         formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
