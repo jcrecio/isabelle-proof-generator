@@ -31,7 +31,6 @@ from huggingface_hub import login
 from dotenv import load_dotenv
 from unsloth import FastLanguageModel
 import numpy as np
-import plotly.express as px
 import pacmap
 from langchain.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -460,15 +459,24 @@ def load_rag():
 
 
 def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
-    with open("logfile.html", "a") as log_file:
-        log(BEGIN_TEMPLATE, file=log_file)
-        sessions = get_subfolders(afp_extractions_folder)
+    sessions = get_subfolders(afp_extractions_folder)
 
-        successes = 0
-        failures = 0
-        inconclusives = 0
+    per_page = 5  # sessions per page
+    page = 1
+    accumulated_per_page = 0
 
-        for session in sessions:
+    successes = 0
+    failures = 0
+    inconclusives = 0
+
+    for session in sessions:
+        if accumulated_per_page == per_page:
+            accumulated_per_page = 0
+            page += 1
+        with open(f"logfile-{page}.html", "a") as log_file:
+            if accumulated_per_page == 0:
+                log(BEGIN_TEMPLATE, file=log_file)
+
             session_name = session.split("/")[-1]
             theory_files = get_files_in_folder(session)
             for theory_file in theory_files:
