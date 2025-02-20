@@ -585,7 +585,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
                             log(
                                 f"""
-                                Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                                Successes: {successes} <-|-> Failures: {failures}<br>
                                 """,
                                 file=log_file,
                             )
@@ -685,6 +685,7 @@ def generate_proof(model, tokenizer, theorem):
             proof.replace("<think>", "")
             .replace("</think>", "")
             .replace("<｜end▁of▁sentence｜>", "")
+            .replace("```", "")
             .strip()
         )
 
