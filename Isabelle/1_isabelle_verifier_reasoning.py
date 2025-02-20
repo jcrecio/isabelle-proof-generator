@@ -549,6 +549,15 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 f"{afp_extractions_original}/thys/{session_name}"
                             )
 
+                            log(
+                                f"<b>Old content:</b><pre><code>{theory_content}</code></pre><br><br>",
+                                file=log_file,
+                            )
+                            log(
+                                f"<b>New content:</b><pre><code>{new_theory_content}</code></pre><br><br>",
+                                file=log_file,
+                            )
+
                             if result[0] == "inconclusive":
                                 inconclusives += 1
                                 log(
