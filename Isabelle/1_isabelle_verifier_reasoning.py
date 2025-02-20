@@ -693,6 +693,7 @@ def generate_proof(model, tokenizer, theorem):
             .replace("<｜end▁of▁sentence｜>", "")
             .replace("```isar", "")
             .replace("```", "")
+            .replace("isabelle", "")
             .strip()
         )
 
@@ -721,6 +722,7 @@ def generate_proof(model, tokenizer, theorem):
             .replace("<｜end▁of▁sentence｜>", "")
             .replace("```isar", "")
             .replace("```", "")
+            .replace("isabelle", "")
             .strip()
         )
 
