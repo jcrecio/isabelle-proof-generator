@@ -350,9 +350,15 @@ def duplicate_lemma_new_proof(content: str, current_lemma: str, new_proof: str) 
 
 
 def replace_lemma_proof(
-    content: str, current_lemma: str, next_lemma: str, new_proof: str
+    content: str, current_lemma: str, next_lemma: str, new_proof_raw: str
 ) -> str:
-    """there is a bug in this method"""
+    # If the lemma is part of the generated proof, remove it from the proof
+    new_proof_raw = (
+        new_proof_raw.replace(current_lemma, "").strip()
+        if current_lemma in new_proof_raw
+        else new_proof_raw
+    )
+
     lines = [line.strip() for line in content.split("\n")]
 
     start_idx = -1
@@ -685,8 +691,8 @@ def generate_proof(model, tokenizer, theorem):
             proof.replace("<think>", "")
             .replace("</think>", "")
             .replace("<｜end▁of▁sentence｜>", "")
-            .replace("```", "")
             .replace("```isar", "")
+            .replace("```", "")
             .strip()
         )
 
@@ -713,6 +719,8 @@ def generate_proof(model, tokenizer, theorem):
             proof.replace("<think>", "")
             .replace("</think>", "")
             .replace("<｜end▁of▁sentence｜>", "")
+            .replace("```isar", "")
+            .replace("```", "")
             .strip()
         )
 
