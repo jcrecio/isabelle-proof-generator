@@ -686,6 +686,7 @@ def generate_proof(model, tokenizer, theorem):
             .replace("</think>", "")
             .replace("<｜end▁of▁sentence｜>", "")
             .replace("```", "")
+            .replace("```isar", "")
             .strip()
         )
 
