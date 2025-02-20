@@ -353,7 +353,7 @@ def replace_lemma_proof(
     content: str, current_lemma: str, next_lemma: str, new_proof_raw: str
 ) -> str:
     # If the lemma is part of the generated proof, remove it from the proof
-    new_proof_raw = (
+    new_proof = (
         new_proof_raw.replace(current_lemma, "").strip()
         if current_lemma in new_proof_raw
         else new_proof_raw
