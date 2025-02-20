@@ -638,6 +638,8 @@ Identify necessary tactics and methods
 Now provide ONLY the clean Isabelle/HOL proof:
 """
 
+max_seq_length = 2048
+
 
 def generate_proof(model, tokenizer, theorem):
     if RAG:
@@ -660,7 +662,7 @@ def generate_proof(model, tokenizer, theorem):
         outputs = model.generate(
             input_ids=inputs.input_ids,
             attention_mask=inputs.attention_mask,
-            max_new_tokens=1200,
+            max_new_tokens=max_seq_length,
             use_cache=True,
             temperature=0.7,
             top_p=0.95,
@@ -686,7 +688,7 @@ def generate_proof(model, tokenizer, theorem):
         outputs = model.generate(
             input_ids=inputs.input_ids,
             attention_mask=inputs.attention_mask,
-            max_new_tokens=1200,
+            max_new_tokens=max_seq_length,
             use_cache=True,
             temperature=0.7,
             top_p=0.95,
