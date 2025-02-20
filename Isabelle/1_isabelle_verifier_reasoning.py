@@ -543,12 +543,6 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 f"{afp_extractions_original}/thys/{session_name}"
                             )
 
-                            # Clean isabelle theory files after verification
-                            _ = shutil.remove(original_theory_file)
-                            _ = shutil.move(
-                                backup_original_theory_file, original_theory_file
-                            )
-
                             if result[0] == "inconclusive":
                                 inconclusives += 1
                                 log(
@@ -583,6 +577,12 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                     """,
                                     file=log_file,
                                 )
+                                # Clean isabelle theory files after verification
+                            os.remove(original_theory_file)
+                            _ = shutil.move(
+                                backup_original_theory_file, original_theory_file
+                            )
+
                             log(
                                 f"""
                                 Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
