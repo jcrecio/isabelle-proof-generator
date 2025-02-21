@@ -464,7 +464,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
     failures = 0
     inconclusives = 0
     lastname = model_to_load.split("/")[-1]
-    log_name = f"logfile-{os.path.basename(lastname)}-{page}.html"
+    log_name = (
+        f"logfile-{os.path.basename(lastname)}-{page}{'-RAG' if RAG else ''}.html"
+    )
 
     for session in sessions:
         if accumulated_per_page == per_page:
@@ -509,7 +511,8 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
                             if GENERATE:
                                 with open(
-                                    f"generated_proofs_{model_to_load}.jsonl", "a"
+                                    f"generated_proofs_{model_to_load}{'-RAG' if RAG else ''}.jsonl",
+                                    "a",
                                 ) as f:
                                     f.write(
                                         f"""{ "lemma": lemma, "proof": generated_proof }\n"""
