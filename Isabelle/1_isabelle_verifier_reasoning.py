@@ -598,6 +598,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                     file=log_file,
                                 )
                         except Exception as e:
+                            print(e)
                             log(
                                 f"""
                                 <span style="color: red"> Unexpected error: {e}</span?<br>
@@ -622,7 +623,7 @@ def load_model():
 
 reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
 
-Theorem: 
+Theorem:
 {theorem}
 
 Think through the proof strategy:
