@@ -665,11 +665,8 @@ math_prompt_style_rag = """Given a theorem in Isabelle/HOL and given some contex
 
 Example:
 
-Theorem:
-"∀x. x + 0 = x"
-
-Proof:
-"by simp"
+Context:
+{context}
 
 Theorem:
 {theorem}
