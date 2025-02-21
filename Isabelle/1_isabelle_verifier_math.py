@@ -70,20 +70,6 @@ WITH_RAG = False
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
-math_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
-
-Theorem: {theorem}
-
-Think through the proof strategy:
-<think>
-Consider the theorem structure
-Plan the proof approach
-Identify necessary tactics and methods
-</think>
-
-Now provide ONLY the clean Isabelle/HOL proof:
-"""
-
 model_to_load = sys.argv[1]
 RAG = True if len(sys.argv) > 3 and sys.argv[2] == "RAG" else False
 
@@ -657,22 +643,36 @@ Proof:
 
 
 # PROMPT TO INFERENCE JSON STYLE TO PASS THE CONTEXT?
-reasoning_prompt_style_rag = """Given a theorem in Isabelle/HOL and given some related theorems with their proofs, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
+math_prompt_style = """Given a theorem in Isabelle/HOL, output ONLY a clean and valid Isabelle/HOL proof without any natural language explanation. I attach one example for you to follow.
 
-Context:
-{context}
+Example:
+
+Theorem:
+"∀x. x + 0 = x"
+
+Proof:
+"by simp"
 
 Theorem:
 {theorem}
 
-Think through the proof strategy:
-<think>
-Consider the theorem structure
-Plan the proof approach
-Identify necessary tactics and methods
-</think>
+Proof:
+"""
 
-Now provide ONLY the clean Isabelle/HOL proof:
+math_prompt_style_rag = """Given a theorem in Isabelle/HOL and given some context that contains related theorems with their proofs, output ONLY a clean and valid Isabelle/HOL proof without any natural language explanation.
+
+Example:
+
+Theorem:
+"∀x. x + 0 = x"
+
+Proof:
+"by simp"
+
+Theorem:
+{theorem}
+
+Proof:
 """
 
 max_seq_length = 2048
@@ -692,7 +692,9 @@ def generate_proof(model, tokenizer, theorem):
             ]
         )
 
-        formatted_prompt = math_prompt_style.format(theorem=theorem, context=context)
+        formatted_prompt = math_prompt_style_rag.format(
+            theorem=theorem, context=context
+        )
         inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
         outputs = model.generate(
             input_ids=inputs.input_ids,
