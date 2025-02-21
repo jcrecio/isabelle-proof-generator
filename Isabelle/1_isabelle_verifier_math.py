@@ -463,12 +463,13 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
     successes = 0
     failures = 0
     inconclusives = 0
+    log_name = f"logfile-{os.path.basename(model_to_load)}-{page}.html"
 
     for session in sessions:
         if accumulated_per_page == per_page:
             accumulated_per_page = 0
             page += 1
-        with open(f"logfile-{model_to_load}-{page}.html", "a") as log_file:
+        with open(log_name, "a") as log_file:
             if accumulated_per_page == 0:
                 log(BEGIN_TEMPLATE, file=log_file)
 
