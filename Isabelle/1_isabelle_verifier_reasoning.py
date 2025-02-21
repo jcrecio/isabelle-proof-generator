@@ -521,7 +521,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
                             if GENERATE:
                                 with open(
-                                    f"generated_proofs_{model_to_load}.jsonl"
+                                    f"generated_proofs_{model_to_load}.jsonl", "a"
                                 ) as f:
                                     f.write(
                                         f"""{ "lemma": lemma, "proof": generated_proof }\n"""
