@@ -526,87 +526,77 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre><br><br>",
                                 file=log_file,
                             )
-                            # generated_proof_without_tags = generated_proof.replace(
-                            #     "['<｜begin▁of▁sentence｜>", ""
-                            # ).replace("['<｜end▁of▁sentence｜>", "")
-
-                            new_theory_content = theory_content.replace(
-                                ground_proof, generated_proof
-                            )
-                            next_lemma = None
-                            if (lemma_index + 1) < len(lemmas_and_proofs):
-                                next_lemma = lemmas_and_proofs[lemma_index + 1][0]
-                            new_theory_content = replace_lemma_proof(
-                                theory_content, lemma, next_lemma, generated_proof
-                            )
-                            if new_theory_content is None:
-                                continue
-
-                            _ = shutil.move(
-                                original_theory_file, backup_original_theory_file
-                            )
-                            create_text_file(original_theory_file, new_theory_content)
 
                             if VERIFY:
+                                new_theory_content = theory_content.replace(
+                                    ground_proof, generated_proof
+                                )
+                                next_lemma = None
+                                if (lemma_index + 1) < len(lemmas_and_proofs):
+                                    next_lemma = lemmas_and_proofs[lemma_index + 1][0]
+                                new_theory_content = replace_lemma_proof(
+                                    theory_content, lemma, next_lemma, generated_proof
+                                )
+                                if new_theory_content is None:
+                                    continue
+
+                                _ = shutil.move(
+                                    original_theory_file, backup_original_theory_file
+                                )
+                                create_text_file(
+                                    original_theory_file, new_theory_content
+                                )
+
                                 result = verify_isabelle_session(
                                     f"{afp_extractions_original}/thys/{session_name}"
                                 )
 
-                            log(
-                                f"<b>Old content:</b><pre><code>{theory_content}</code></pre><br><br>",
-                                file=log_file,
-                            )
-                            log(
-                                f"<b>New content:</b><pre><code>{new_theory_content}</code></pre><br><br>",
-                                file=log_file,
-                            )
+                                if result[0] == "inconclusive":
+                                    inconclusives += 1
+                                    log(
+                                        f"""
+                                        <div style="border:1px solid black">
+                                            <span style="color: orange; font-stye: bold">Inconclusive Isabelle/HOL proof.</span><br>
+                                            Error details: <br>
+                                            <div style="font-style: italic;">{result[1]}</div>
+                                        </div><br>
+                                        """,
+                                        file=log_file,
+                                    )
+                                elif result[0] == "error":
+                                    failures += 1
+                                    log(
+                                        f"""
+                                        <div style="border:1px solid black">
+                                            <span style="color: red; font-stye: bold">Failing Isabelle/HOL proof.</span><br>
+                                            Error details: <br>
+                                            <div style="font-style: italic;">{result[1]}</div>
+                                        </div><br>
+                                        """,
+                                        file=log_file,
+                                    )
+                                elif result[0] == "success":
+                                    successes += 1
+                                    log(
+                                        """
+                                        <div style="border:1px solid black">
+                                            <span style="color: green; font-stye: bold">Successful Isabelle/HOL proof.</span>
+                                        </div><br>
+                                        """,
+                                        file=log_file,
+                                    )
+                                    # Clean isabelle theory files after verification
+                                os.remove(original_theory_file)
+                                _ = shutil.move(
+                                    backup_original_theory_file, original_theory_file
+                                )
 
-                            if result[0] == "inconclusive":
-                                inconclusives += 1
                                 log(
                                     f"""
-                                    <div style="border:1px solid black">
-                                        <span style="color: orange; font-stye: bold">Inconclusive Isabelle/HOL proof.</span><br>
-                                        Error details: <br>
-                                        <div style="font-style: italic;">{result[1]}</div>
-                                    </div><br>
+                                    Successes: {successes} <-|-> Failures: {failures}<br>
                                     """,
                                     file=log_file,
                                 )
-                            elif result[0] == "error":
-                                failures += 1
-                                log(
-                                    f"""
-                                    <div style="border:1px solid black">
-                                        <span style="color: red; font-stye: bold">Failing Isabelle/HOL proof.</span><br>
-                                        Error details: <br>
-                                        <div style="font-style: italic;">{result[1]}</div>
-                                    </div><br>
-                                    """,
-                                    file=log_file,
-                                )
-                            elif result[0] == "success":
-                                successes += 1
-                                log(
-                                    """
-                                    <div style="border:1px solid black">
-                                        <span style="color: green; font-stye: bold">Successful Isabelle/HOL proof.</span>
-                                    </div><br>
-                                    """,
-                                    file=log_file,
-                                )
-                                # Clean isabelle theory files after verification
-                            os.remove(original_theory_file)
-                            _ = shutil.move(
-                                backup_original_theory_file, original_theory_file
-                            )
-
-                            log(
-                                f"""
-                                Successes: {successes} <-|-> Failures: {failures}<br>
-                                """,
-                                file=log_file,
-                            )
                         except Exception as e:
                             log(
                                 f"""
