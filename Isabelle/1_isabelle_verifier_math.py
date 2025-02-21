@@ -35,6 +35,9 @@ import pacmap
 from langchain.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
+GENERATE = True
+VERIFY = False
+
 BEGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -67,7 +70,7 @@ WITH_RAG = False
 EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
-reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
+math_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
 
 Theorem: {theorem}
 
@@ -88,7 +91,7 @@ load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
-VERBOSE = True
+VERBOSE = False
 LOG_TIME = False
 ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
@@ -350,9 +353,15 @@ def duplicate_lemma_new_proof(content: str, current_lemma: str, new_proof: str) 
 
 
 def replace_lemma_proof(
-    content: str, current_lemma: str, next_lemma: str, new_proof: str
+    content: str, current_lemma: str, next_lemma: str, new_proof_raw: str
 ) -> str:
-    """there is a bug in this method"""
+    # If the lemma is part of the generated proof, remove it from the proof
+    new_proof = (
+        new_proof_raw.replace(current_lemma, "").strip()
+        if current_lemma in new_proof_raw
+        else new_proof_raw
+    )
+
     lines = [line.strip() for line in content.split("\n")]
 
     start_idx = -1
@@ -473,7 +482,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
         if accumulated_per_page == per_page:
             accumulated_per_page = 0
             page += 1
-        with open(f"logfile-{page}.html", "a") as log_file:
+        with open(f"logfile-{model_to_load}-{page}.html", "a") as log_file:
             if accumulated_per_page == 0:
                 log(BEGIN_TEMPLATE, file=log_file)
 
@@ -510,6 +519,14 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             theory_content = read_file(original_theory_file)
                             generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
+                            if GENERATE:
+                                with open(
+                                    f"generated_proofs_{model_to_load}.jsonl", "a"
+                                ) as f:
+                                    f.write(
+                                        f"""{ "lemma": lemma, "proof": generated_proof }\n"""
+                                    )
+
                             log(
                                 f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
                                 file=log_file,
@@ -539,8 +556,18 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             )
                             create_text_file(original_theory_file, new_theory_content)
 
-                            result = verify_isabelle_session(
-                                f"{afp_extractions_original}/thys/{session_name}"
+                            if VERIFY:
+                                result = verify_isabelle_session(
+                                    f"{afp_extractions_original}/thys/{session_name}"
+                                )
+
+                            log(
+                                f"<b>Old content:</b><pre><code>{theory_content}</code></pre><br><br>",
+                                file=log_file,
+                            )
+                            log(
+                                f"<b>New content:</b><pre><code>{new_theory_content}</code></pre><br><br>",
+                                file=log_file,
                             )
 
                             if result[0] == "inconclusive":
@@ -585,7 +612,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
                             log(
                                 f"""
-                                Successes: {successes/(successes + failures)} ({successes}%) <-|-> Failures: {failures/(successes + failures)} ({failures}%)<br>
+                                Successes: {successes} <-|-> Failures: {failures}<br>
                                 """,
                                 file=log_file,
                             )
@@ -612,18 +639,20 @@ def load_model():
     return model, tokenizer
 
 
-reasoning_prompt_style = """Given a theorem in Isabelle/HOL, think through the proof strategy step by step, then output ONLY a clean, valid Isabelle/HOL proof.
+math_prompt_style = """Given a theorem in Isabelle/HOL, output ONLY a clean and valid Isabelle/HOL proof without any natural language explanation. I attach one example for you to follow.
 
-Theorem: {theorem}
+Example:
 
-Think through the proof strategy:
-<think>
-Consider the theorem structure
-Plan the proof approach
-Identify necessary tactics and methods
-</think>
+Theorem:
+"∀x. x + 0 = x"
 
-Now provide ONLY the clean Isabelle/HOL proof:
+Proof:
+"by simp"
+
+Theorem:
+{theorem}
+
+Proof:
 """
 
 
@@ -663,9 +692,7 @@ def generate_proof(model, tokenizer, theorem):
             ]
         )
 
-        formatted_prompt = reasoning_prompt_style.format(
-            theorem=theorem, context=context
-        )
+        formatted_prompt = math_prompt_style.format(theorem=theorem, context=context)
         inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
         outputs = model.generate(
             input_ids=inputs.input_ids,
@@ -685,13 +712,16 @@ def generate_proof(model, tokenizer, theorem):
             proof.replace("<think>", "")
             .replace("</think>", "")
             .replace("<｜end▁of▁sentence｜>", "")
+            .replace("```isar", "")
+            .replace("```", "")
+            .replace("isabelle", "")
             .strip()
         )
 
         return proof
 
     else:
-        formatted_prompt = reasoning_prompt_style.format(theorem=theorem)
+        formatted_prompt = math_prompt_style.format(theorem=theorem)
         inputs = tokenizer([formatted_prompt], return_tensors="pt").to("cuda")
         outputs = model.generate(
             input_ids=inputs.input_ids,
@@ -711,6 +741,9 @@ def generate_proof(model, tokenizer, theorem):
             proof.replace("<think>", "")
             .replace("</think>", "")
             .replace("<｜end▁of▁sentence｜>", "")
+            .replace("```isar", "")
+            .replace("```", "")
+            .replace("isabelle", "")
             .strip()
         )
 
