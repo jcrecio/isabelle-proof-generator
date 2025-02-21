@@ -91,7 +91,7 @@ load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
-VERBOSE = True
+VERBOSE = False
 LOG_TIME = False
 ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
@@ -482,7 +482,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
         if accumulated_per_page == per_page:
             accumulated_per_page = 0
             page += 1
-        with open(f"logfile-{page}.html", "a") as log_file:
+        with open(f"logfile-{model_to_load}-{page}.html", "a") as log_file:
             if accumulated_per_page == 0:
                 log(BEGIN_TEMPLATE, file=log_file)
 
