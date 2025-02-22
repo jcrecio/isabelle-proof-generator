@@ -429,7 +429,12 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
         if accumulated_per_page == per_page:
             accumulated_per_page = 0
             page += 1
-        with open(log_name, "a") as log_file:
+        # with open(log_name, "a") as log_file:
+        with open(
+            f"generated_proofs_{model_to_load}{'-RAG' if RAG else ''}.jsonl",
+            "a",
+        ) as f:
+            log_file = None
             if accumulated_per_page == 0:
                 log(BEGIN_TEMPLATE, file=log_file)
 
@@ -467,13 +472,13 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                             generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
                             if GENERATE:
-                                with open(
-                                    f"generated_proofs_{model_to_load}{'-RAG' if RAG else ''}.jsonl",
-                                    "a",
-                                ) as f:
-                                    f.write(
-                                        f"""{ "lemma": lemma, "proof": generated_proof }\n"""
-                                    )
+                                # with open(
+                                #     f"generated_proofs_{model_to_load}{'-RAG' if RAG else ''}.jsonl",
+                                #     "a",
+                                # ) as f:
+                                f.write(
+                                    f"""{ "lemma": lemma, "proof": generated_proof }\n"""
+                                )
 
                             log(
                                 f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
