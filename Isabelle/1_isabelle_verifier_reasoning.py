@@ -480,7 +480,10 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 print("generating proof")
                                 print(generated_proof)
                                 f.write(
-                                    f"""{ "lemma": lemma, "proof": generated_proof }\n"""
+                                    json.dumps(
+                                        {"lemma": lemma, "proof": generated_proof}
+                                    )
+                                    + "\n"
                                 )
 
                             log(
@@ -643,7 +646,7 @@ def generate_proof(model, tokenizer, theorem):
             attention_mask=inputs.attention_mask,
             max_new_tokens=max_seq_length,
             use_cache=True,
-            temperature=0.7,
+            temperature=0,
             top_p=0.95,
         )
 
