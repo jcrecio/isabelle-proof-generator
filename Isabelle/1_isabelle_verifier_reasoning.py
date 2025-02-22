@@ -469,7 +469,6 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         try:
                             print("reading theory content")
                             theory_content = read_file(original_theory_file)
-                            print("generating proof")
                             generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
                             if GENERATE:
