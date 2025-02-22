@@ -71,6 +71,7 @@ EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
 model_to_load = sys.argv[1]
+log_name = f"logfile-{os.path.basename(model_to_load)}.html"
 RAG = True if len(sys.argv) > 3 and sys.argv[2] == "RAG" else False
 
 load_dotenv()
@@ -421,9 +422,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
     failures = 0
     inconclusives = 0
     lastname = model_to_load.split("/")[-1]
-    log_name = (
-        f"logfile-{os.path.basename(lastname)}-{page}{'-RAG' if RAG else ''}.html"
-    )
+    log_name = f"generated_proofs-{os.path.basename(lastname)}-{page}{'-RAG' if RAG else ''}.jsonl"
 
     for session in sessions:
         if accumulated_per_page == per_page:
@@ -431,7 +430,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
             page += 1
         # with open(log_name, "a") as log_file:
         with open(
-            f"generated_proofs_{model_to_load}{'-RAG' if RAG else ''}.jsonl",
+            log_name,
             "a",
         ) as f:
             log_file = None
