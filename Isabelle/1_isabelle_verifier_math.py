@@ -71,6 +71,7 @@ EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
 model_to_load = sys.argv[1]
+log_name = f"logfile-{os.path.basename(model_to_load)}.html"
 RAG = True if len(sys.argv) > 3 and sys.argv[2] == "RAG" else False
 
 load_dotenv()
@@ -421,13 +422,18 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
     failures = 0
     inconclusives = 0
     lastname = model_to_load.split("/")[-1]
-    log_name = f"logfile-{os.path.basename(lastname)}-{page}.html"
+    log_name = f"generated_proofs-{os.path.basename(lastname)}-{page}{'-RAG' if RAG else ''}.jsonl"
 
     for session in sessions:
         if accumulated_per_page == per_page:
             accumulated_per_page = 0
             page += 1
-        with open(log_name, "a") as log_file:
+        # with open(log_name, "a") as log_file:
+        with open(
+            log_name,
+            "a",
+        ) as f:
+            log_file = sys.stdout
             if accumulated_per_page == 0:
                 log(BEGIN_TEMPLATE, file=log_file)
 
@@ -461,16 +467,24 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
 
                         try:
+                            print("reading theory content")
                             theory_content = read_file(original_theory_file)
+                            print("generating proof")
                             generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
                             if GENERATE:
-                                with open(
-                                    f"generated_proofs_{model_to_load}.jsonl", "a"
-                                ) as f:
-                                    f.write(
-                                        f"""{ "lemma": lemma, "proof": generated_proof }\n"""
+                                # with open(
+                                #     f"generated_proofs_{model_to_load}{'-RAG' if RAG else ''}.jsonl",
+                                #     "a",
+                                # ) as f:
+                                print("generating proof")
+                                print(generated_proof)
+                                f.write(
+                                    json.dumps(
+                                        {"lemma": lemma, "proof": generated_proof}
                                     )
+                                    + "\n"
+                                )
 
                             log(
                                 f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
@@ -480,88 +494,76 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre><br><br>",
                                 file=log_file,
                             )
-                            # generated_proof_without_tags = generated_proof.replace(
-                            #     "['<｜begin▁of▁sentence｜>", ""
-                            # ).replace("['<｜end▁of▁sentence｜>", "")
-
-                            new_theory_content = theory_content.replace(
-                                ground_proof, generated_proof
-                            )
-                            next_lemma = None
-                            if (lemma_index + 1) < len(lemmas_and_proofs):
-                                next_lemma = lemmas_and_proofs[lemma_index + 1][0]
-                            new_theory_content = replace_lemma_proof(
-                                theory_content, lemma, next_lemma, generated_proof
-                            )
-                            if new_theory_content is None:
-                                continue
-
-                            _ = shutil.move(
-                                original_theory_file, backup_original_theory_file
-                            )
-                            create_text_file(original_theory_file, new_theory_content)
 
                             if VERIFY:
+                                next_lemma = None
+                                if (lemma_index + 1) < len(lemmas_and_proofs):
+                                    next_lemma = lemmas_and_proofs[lemma_index + 1][0]
+                                new_theory_content = replace_lemma_proof(
+                                    theory_content, lemma, next_lemma, generated_proof
+                                )
+                                if new_theory_content is None:
+                                    continue
+
+                                _ = shutil.move(
+                                    original_theory_file, backup_original_theory_file
+                                )
+                                create_text_file(
+                                    original_theory_file, new_theory_content
+                                )
+
                                 result = verify_isabelle_session(
                                     f"{afp_extractions_original}/thys/{session_name}"
                                 )
 
-                            log(
-                                f"<b>Old content:</b><pre><code>{theory_content}</code></pre><br><br>",
-                                file=log_file,
-                            )
-                            log(
-                                f"<b>New content:</b><pre><code>{new_theory_content}</code></pre><br><br>",
-                                file=log_file,
-                            )
+                                if result[0] == "inconclusive":
+                                    inconclusives += 1
+                                    log(
+                                        f"""
+                                        <div style="border:1px solid black">
+                                            <span style="color: orange; font-stye: bold">Inconclusive Isabelle/HOL proof.</span><br>
+                                            Error details: <br>
+                                            <div style="font-style: italic;">{result[1]}</div>
+                                        </div><br>
+                                        """,
+                                        file=log_file,
+                                    )
+                                elif result[0] == "error":
+                                    failures += 1
+                                    log(
+                                        f"""
+                                        <div style="border:1px solid black">
+                                            <span style="color: red; font-stye: bold">Failing Isabelle/HOL proof.</span><br>
+                                            Error details: <br>
+                                            <div style="font-style: italic;">{result[1]}</div>
+                                        </div><br>
+                                        """,
+                                        file=log_file,
+                                    )
+                                elif result[0] == "success":
+                                    successes += 1
+                                    log(
+                                        """
+                                        <div style="border:1px solid black">
+                                            <span style="color: green; font-stye: bold">Successful Isabelle/HOL proof.</span>
+                                        </div><br>
+                                        """,
+                                        file=log_file,
+                                    )
+                                    # Clean isabelle theory files after verification
+                                os.remove(original_theory_file)
+                                _ = shutil.move(
+                                    backup_original_theory_file, original_theory_file
+                                )
 
-                            if result[0] == "inconclusive":
-                                inconclusives += 1
                                 log(
                                     f"""
-                                    <div style="border:1px solid black">
-                                        <span style="color: orange; font-stye: bold">Inconclusive Isabelle/HOL proof.</span><br>
-                                        Error details: <br>
-                                        <div style="font-style: italic;">{result[1]}</div>
-                                    </div><br>
+                                    Successes: {successes} <-|-> Failures: {failures}<br>
                                     """,
                                     file=log_file,
                                 )
-                            elif result[0] == "error":
-                                failures += 1
-                                log(
-                                    f"""
-                                    <div style="border:1px solid black">
-                                        <span style="color: red; font-stye: bold">Failing Isabelle/HOL proof.</span><br>
-                                        Error details: <br>
-                                        <div style="font-style: italic;">{result[1]}</div>
-                                    </div><br>
-                                    """,
-                                    file=log_file,
-                                )
-                            elif result[0] == "success":
-                                successes += 1
-                                log(
-                                    """
-                                    <div style="border:1px solid black">
-                                        <span style="color: green; font-stye: bold">Successful Isabelle/HOL proof.</span>
-                                    </div><br>
-                                    """,
-                                    file=log_file,
-                                )
-                                # Clean isabelle theory files after verification
-                            os.remove(original_theory_file)
-                            _ = shutil.move(
-                                backup_original_theory_file, original_theory_file
-                            )
-
-                            log(
-                                f"""
-                                Successes: {successes} <-|-> Failures: {failures}<br>
-                                """,
-                                file=log_file,
-                            )
                         except Exception as e:
+                            print(e)
                             log(
                                 f"""
                                 <span style="color: red"> Unexpected error: {e}</span?<br>
@@ -584,24 +586,6 @@ def load_model():
     return model, tokenizer
 
 
-math_prompt_style = """Given a theorem in Isabelle/HOL, output ONLY a clean and valid Isabelle/HOL proof without any natural language explanation. I attach one example for you to follow.
-
-Example:
-
-Theorem:
-"∀x. x + 0 = x"
-
-Proof:
-"by simp"
-
-Theorem:
-{theorem}
-
-Proof:
-"""
-
-
-# PROMPT TO INFERENCE JSON STYLE TO PASS THE CONTEXT?
 math_prompt_style = """Given a theorem in Isabelle/HOL, output ONLY a clean and valid Isabelle/HOL proof without any natural language explanation. I attach one example for you to follow.
 
 Example:
@@ -657,7 +641,7 @@ def generate_proof(model, tokenizer, theorem):
             attention_mask=inputs.attention_mask,
             max_new_tokens=max_seq_length,
             use_cache=True,
-            temperature=0.7,
+            temperature=0,
             top_p=0.95,
         )
 
