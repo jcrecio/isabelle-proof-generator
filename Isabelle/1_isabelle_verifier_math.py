@@ -305,74 +305,31 @@ def get_lemmas_proofs_for_file(extraction_file_path: str):
 
 
 def find_text_and_next_line(content, search_text):
-    start_pos = content.find(search_text)
-    if start_pos == -1:
+    pos = content.find(search_text)
+    if pos == -1:
         return None
 
-    end_pos = start_pos + len(search_text)
-
-    next_line_start = content.find("\n", end_pos) + 1
-    if next_line_start == 0:
-        return None
-
-    next_line_end = content.find("\n", next_line_start)
-    if next_line_end == -1:
-        next_line_end = len(content)
-
-    return next_line_start
-
-
-def duplicate_lemma_new_proof(content: str, current_lemma: str, new_proof: str) -> str:
-    lines = [line.strip() for line in content.split("\n")]
-
-    start_idx = -1
-    try:
-        start_idx = lines.index(current_lemma)
-    except ValueError:
-        # not finding it directly then try to find in the whole file content
-        # raise ValueError(f"Start line '{start_line}' not found in content")
-        start_idx = find_text_and_next_line(content, current_lemma)
-    start_idx = start_idx - 1
-    lines.insert(start_idx, f"lemma {str(uuid.uuid4())} {current_lemma[5:]}")
-    lines.insert(start_idx + 1, f"{new_proof}")
-    return "\n".join(lines)
+    return pos
 
 
 def replace_lemma_proof(
     content: str, current_lemma: str, next_lemma: str, new_proof_raw: str
 ) -> str:
-    # If the lemma is part of the generated proof, remove it from the proof
+
+    # If the lemma is part of the generated proof, leave it, otherwise add it to the proof
     new_proof = (
-        new_proof_raw.replace(current_lemma, "").strip()
+        new_proof_raw
         if current_lemma in new_proof_raw
-        else new_proof_raw
+        else f"{current_lemma} {new_proof_raw}"
     )
 
-    lines = [line.strip() for line in content.split("\n")]
+    # start and end lines where to remove
+    start_pos = find_text_and_next_line(content, current_lemma)
+    end_pos = find_text_and_next_line(content, next_lemma)
 
-    start_idx = -1
-    try:
-        start_idx = lines.index(current_lemma)
-    except ValueError:
-        # not finding it directly then try to find in the whole file content
-        # raise ValueError(f"Start line '{start_line}' not found in content")
-        start_idx = find_text_and_next_line(content, current_lemma)
+    result_content = content[:start_pos] + new_proof + content[end_pos:]
 
-    if start_idx is None:
-        return None
-
-    proof_idx = None
-    for i in range(start_idx + 1, len(lines)):
-        if next_lemma == lines[i]:
-            proof_idx = i
-            break
-
-    if proof_idx is None:
-        duplicate_lemma_new_proof(content, current_lemma, new_proof)
-
-    result_lines = lines[: start_idx + 1] + [new_proof] + lines[proof_idx:]
-
-    return "\n".join(result_lines)
+    return result_content
 
 
 def find_string_in_file(filename, search_string, case_sensitive=True):

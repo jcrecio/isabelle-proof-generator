@@ -312,22 +312,6 @@ def find_text_and_next_line(content, search_text):
     return pos
 
 
-def duplicate_lemma_new_proof(content: str, current_lemma: str, new_proof: str) -> str:
-    lines = [line.strip() for line in content.split("\n")]
-
-    start_idx = -1
-    try:
-        start_idx = lines.index(current_lemma)
-    except ValueError:
-        # not finding it directly then try to find in the whole file content
-        # raise ValueError(f"Start line '{start_line}' not found in content")
-        start_idx = find_text_and_next_line(content, current_lemma)
-    start_idx = start_idx - 1
-    lines.insert(start_idx, f"lemma {str(uuid.uuid4())} {current_lemma[5:]}")
-    lines.insert(start_idx + 1, f"{new_proof}")
-    return "\n".join(lines)
-
-
 def replace_lemma_proof(
     content: str, current_lemma: str, next_lemma: str, new_proof_raw: str
 ) -> str:
