@@ -433,7 +433,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
             log_name,
             "a",
         ) as f:
-            log_file = None
+            log_file = sys.stdout
             if accumulated_per_page == 0:
                 log(BEGIN_TEMPLATE, file=log_file)
 
