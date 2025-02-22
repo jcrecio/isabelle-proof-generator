@@ -78,7 +78,7 @@ load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
-VERBOSE = True
+VERBOSE = False
 LOG_TIME = False
 ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
@@ -467,7 +467,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
 
                         try:
+                            print("reading theory content")
                             theory_content = read_file(original_theory_file)
+                            print("generating proof")
                             generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
 
                             if GENERATE:
@@ -475,6 +477,8 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 #     f"generated_proofs_{model_to_load}{'-RAG' if RAG else ''}.jsonl",
                                 #     "a",
                                 # ) as f:
+                                print("generating proof")
+                                print(generated_proof)
                                 f.write(
                                     f"""{ "lemma": lemma, "proof": generated_proof }\n"""
                                 )
