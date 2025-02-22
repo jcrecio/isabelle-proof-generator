@@ -78,7 +78,7 @@ load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 login(hf_token)
 
-VERBOSE = False
+VERBOSE = True
 LOG_TIME = False
 ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
