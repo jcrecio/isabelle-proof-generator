@@ -8,7 +8,8 @@ from threading import Timer
 import time
 import uuid
 
-
+ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin"
+ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 afp_extractions_original = "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions"
 session_name = "HOL-Analysis"
 theory_name = "ADS_Construction"
@@ -34,9 +35,7 @@ def read_json_file(json_file_path: str):
 # )
 
 original_theory_file = "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions/thys/ADS_Functor/ADS_Construction.thy"
-backup_original_theory_file = (
-    f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
-)
+backup_original_theory_file = "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions/thys/ADS_Functor/ADS_Construction_backup.thy"
 theory_content = read_file(original_theory_file)
 generated_proof = "by unfold_locales(auto simp add: merge_discrete_def)"
 lemma_index = 2
@@ -68,6 +67,14 @@ def find_text_and_next_line(content, search_text):
     return next_line_start
 
 
+def find_text_and_next_line2(content, search_text):
+    pos = content.find(search_text)
+    if pos == -1:
+        return None
+
+    return pos
+
+
 def replace_lemma_proof2(
     content: str, current_lemma: str, next_lemma: str, new_proof_raw: str
 ) -> str:
@@ -80,14 +87,12 @@ def replace_lemma_proof2(
     )
 
     # start and end lines where to remove
-    start_idx = find_text_and_next_line(content, current_lemma)
-    end_idx = find_text_and_next_line(content, current_lemma)
+    start_pos = find_text_and_next_line2(content, current_lemma)
+    end_pos = find_text_and_next_line2(content, next_lemma)
 
-    lines = [line.strip() for line in content.split("\n")]
+    result_content = content[:start_pos] + new_proof + content[end_pos:]
 
-    result_lines = lines[:start_idx] + [new_proof] + lines[end_idx:]
-
-    return "\n".join(result_lines)
+    return result_content
 
 
 def replace_lemma_proof(
@@ -95,12 +100,12 @@ def replace_lemma_proof(
 ) -> str:
     # If the lemma is part of the generated proof, remove it from the proof
     new_proof = (
-        new_proof_raw.replace(current_lemma, "").strip()
+        new_proof_raw.replace(current_lemma, "")
         if current_lemma in new_proof_raw
         else new_proof_raw
     )
 
-    lines = [line.strip() for line in content.split("\n")]
+    lines = [line for line in content.split("\n")]
 
     start_idx = -1
     try:
@@ -194,10 +199,6 @@ def get_lemmas_proofs_for_file(extraction_file_path: str):
     return lemmas_with_proofs
 
 
-ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
-ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
-
-
 def convert_to_command(command: str):
     return command.split()
 
@@ -289,6 +290,7 @@ def verify_isabelle_session(project_folder: str):
         or "malformed" in output[1]
         or "Invalid" in output[1]
         or "invalid" in output[1]
+        or "denied" in output[1]
     ):
         return ["error", output[1]]
     return ["success", output[1]]
@@ -309,3 +311,6 @@ _ = shutil.move(original_theory_file, backup_original_theory_file)
 create_text_file(original_theory_file, new_theory_content)
 
 result = verify_isabelle_session(f"{afp_extractions_original}/thys/{session_name}")
+
+os.remove(original_theory_file)
+_ = shutil.move(backup_original_theory_file, original_theory_file)
