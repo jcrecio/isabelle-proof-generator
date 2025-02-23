@@ -38,6 +38,30 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 GENERATE = True
 VERIFY = False
 
+FILE_TO_RETRIEVE_GENERATED_PROOFS = "afp_generated/generated_proofs-Remath-v0.5-1.jsonl"
+generated_proofs = {}
+
+
+def load_generated_proofs():
+    matches = []
+    with open(FILE_TO_RETRIEVE_GENERATED_PROOFS, "r") as f:
+        for line in f:
+            record = json.loads(line.strip())
+            if "lemma" in record:
+                matches[record["lemma"]] = record["proof"]
+    return matches
+
+
+if not GENERATE:
+    generated_proofs = load_generated_proofs()
+
+
+def retrieve_generated_proof_by_lemma(lemma):
+    if lemma in generated_proofs:
+        return generated_proofs[lemma]
+    return None
+
+
 BEGIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -80,7 +104,8 @@ login(hf_token)
 
 VERBOSE = False
 LOG_TIME = False
-ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
+ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
+# ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
 
@@ -469,21 +494,23 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                         try:
                             print("reading theory content")
                             theory_content = read_file(original_theory_file)
-                            print("generating proof")
-                            generated_proof = generate_proof(MODEL, TOKENIZER, lemma)
+                            generated_proof = None
 
                             if GENERATE:
-                                # with open(
-                                #     f"generated_proofs_{model_to_load}{'-RAG' if RAG else ''}.jsonl",
-                                #     "a",
-                                # ) as f:
-                                print("generating proof")
+                                generated_proof = generate_proof(
+                                    MODEL, TOKENIZER, lemma
+                                )
+                                print(f"generating proof ({lemma_index})")
                                 print(generated_proof)
                                 f.write(
                                     json.dumps(
                                         {"lemma": lemma, "proof": generated_proof}
                                     )
                                     + "\n"
+                                )
+                            else:
+                                generated_proof = retrieve_generated_proof_by_lemma(
+                                    lemma
                                 )
 
                             log(

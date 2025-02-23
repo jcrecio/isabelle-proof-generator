@@ -12,6 +12,7 @@ import time
 from timeit import Timer
 from typing import Any, List, Optional, TextIO
 from datetime import datetime
+import random
 
 # from huggingface_hub import hf_hub_download
 import pickle
@@ -19,20 +20,46 @@ import pickle
 # from huggingface_hub import login
 from dotenv import load_dotenv
 
+empty = """"""
+linesep = """
+"""
+n_line_single = """\n"""
+n_line_double = """\\n"""
+single_line = """\\"""
+double_line = """\\\\"""
+comma_escape = """\'"""
+no_comma_escape = """'"""
+
+
+def encode(theory):
+    result = (
+        theory.replace(double_line, single_line)
+        .replace(comma_escape, no_comma_escape)
+        .replace(n_line_single, linesep)
+        .replace(n_line_double, linesep)
+    )
+
+    return result
+
+
 GENERATE = False
 VERIFY = True
+FAST_VERIFY = False
 
-FILE_TO_RETRIEVE_GENERATED_PROOFS = "afp_generated/generated_proofs-Remath-v0.5.jsonl"
+FILE_TO_RETRIEVE_GENERATED_PROOFS = "afp_generated/generated_proofs-Isaremath-v0.1"
 generated_proofs = {}
 
 
 def load_generated_proofs():
-    matches = {}
+    matches_raw = {}
     with open(FILE_TO_RETRIEVE_GENERATED_PROOFS, "r") as f:
         for line in f:
             record = json.loads(line.strip())
             if "lemma" in record:
-                matches[record["lemma"]] = record["proof"]
+                matches_raw[record["lemma"]] = record["proof"]
+
+    matches = dict(random.sample(matches_raw.items(), len(matches_raw)))
+
     return matches
 
 
@@ -88,7 +115,7 @@ load_dotenv()
 
 VERBOSE = True
 LOG_TIME = False
-ISABELLE_PATH = "/home/jcrecio/repos/isabelle_proof_generator/isabelle_server/Isabelle2024/bin/isabelle"
+ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
 # ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
@@ -267,13 +294,25 @@ def verify_isabelle_session(project_folder: str):
         return ["inconclusive", output]
     if (
         "error" in output[1]
+        or "error" in output[2]
         or "Error" in output[1]
+        or "Error" in output[2]
         or "Malformed" in output[1]
+        or "Malformed" in output[2]
         or "malformed" in output[1]
+        or "malformed" in output[2]
         or "Invalid" in output[1]
+        or "Invalid" in output[2]
         or "invalid" in output[1]
+        or "invalid" in output[2]
+        or "not found" in output[1]
+        or "not found" in output[2]
+        or "bad" in output[1]
+        or "bad" in output[2]
+        or "Bad" in output[1]
+        or "Bad" in output[2]
     ):
-        return ["error", output[1]]
+        return ["error", f"{output[1]} {output[2]}"]
     return ["success", output[1]]
 
 
@@ -305,18 +344,18 @@ def get_lemmas_proofs_for_file(extraction_file_path: str):
             continue
 
         current_proof = ""
-        print("**************************************************************\n")
-        print(f"Problems length {problem_names_len}")
-        print(f"Lemma index {index} || Lemma found {lemma}\n")
-        print(f"Lemma found {lemma}\n")
+        # print("**************************************************************\n")
+        # print(f"Problems length {problem_names_len}")
+        # print(f"Lemma index {index} || Lemma found {lemma}\n")
+        # print(f"Lemma found {lemma}\n")
         next_lemma_translations_index = None
         if index + 1 < problem_names_len:
             next_lemma = problem_names[index + 1]
-            print(f"Next lemma {next_lemma}\n")
+            # print(f"Next lemma {next_lemma}\n")
             next_lemma_translations_index = find_lemma_index_in_translations(
                 next_lemma, translations
             )
-            print(f"next_lemma_translations_index{next_lemma_translations_index}\n")
+            # print(f"next_lemma_translations_index{next_lemma_translations_index}\n")
         if next_lemma_translations_index is None:
             next_lemma_translations_index = len(translations)
 
@@ -450,6 +489,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
     log_name = f"generated_proofs-{os.path.basename(lastname)}-{page}{'-RAG' if RAG else ''}.jsonl"
 
     for session in sessions:
+        GO_TO_NEXT_SESSION = False
         if accumulated_per_page == per_page:
             accumulated_per_page = 0
             page += 1
@@ -461,6 +501,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
             session_name = session.split("/")[-1]
             theory_files = get_files_in_folder(session)
             for theory_file in theory_files:
+                if GO_TO_NEXT_SESSION:
+                    break
+
                 theory_name = extract_theory_name(
                     theory_file.split("/")[-1], session.split("/")[-1]
                 )
@@ -481,6 +524,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                     for lemma_index, (lemma, ground_proof) in enumerate(
                         lemmas_and_proofs
                     ):
+                        if GO_TO_NEXT_SESSION:
+                            break
+
                         log("<hr><hr><hr><hr>", file=html_logfile)
                         log(f"<h2>{lemma}</h2><br>", file=html_logfile)
 
@@ -527,6 +573,9 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 new_theory_content = replace_lemma_proof(
                                     theory_content, lemma, next_lemma, generated_proof
                                 )
+
+                                rrr = encode(new_theory_content)
+
                                 if new_theory_content is None:
                                     continue
 
@@ -537,11 +586,23 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                     original_theory_file, new_theory_content
                                 )
 
+                                print("****************************************\n")
+                                print("lemma under verification\n")
+                                print(f"{lemma}\n\n")
+                                print("proof to use:\n")
+                                print(f"{generated_proof}\n")
                                 result = verify_isabelle_session(
                                     f"{afp_extractions_original}/thys/{session_name}"
                                 )
 
+                                if "not found" in result[1]:
+                                    print(
+                                        f"CRITICAL ERROR: Your isabelle executable {ISABELLE_COMMAND} is not working."
+                                    )
+                                    exit(1)
+
                                 if result[0] == "inconclusive":
+                                    print(f"INCONCLUSIVE: {result[1]}")
                                     inconclusives += 1
                                     log(
                                         f"""
@@ -554,6 +615,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                         file=html_logfile,
                                     )
                                 elif result[0] == "error":
+                                    print(f"ERROR: {result[1]}")
                                     failures += 1
                                     log(
                                         f"""
@@ -565,7 +627,11 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                         """,
                                         file=html_logfile,
                                     )
+
+                                    if FAST_VERIFY:
+                                        GO_TO_NEXT_SESSION = True
                                 elif result[0] == "success":
+                                    print("SUCCESS")
                                     successes += 1
                                     log(
                                         """
@@ -583,7 +649,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
 
                                 log2(
                                     f"""
-                                    ------------------->Successes: {successes} <-|-> Failures: {failures}
+                                    ------------------->Successes: {str(successes)} <-|-> Failures: {str(failures)}
                                     """,
                                     file=html_logfile,
                                 )
@@ -727,6 +793,6 @@ if RAG:
 
 # MODEL, TOKENIZER = load_model()
 verify_all_sessions(
-    "/home/jcrecio/repos/isabelle-proof-generator/afp_extractions/afp_extractions",
-    "/home/jcrecio/repos/isabelle-proof-generator/afp-current-extractions",
+    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp_extractions/afp_extractions",
+    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions",
 )
