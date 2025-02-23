@@ -305,13 +305,19 @@ def get_lemmas_proofs_for_file(extraction_file_path: str):
             continue
 
         current_proof = ""
-
+        print("**************************************************************\n")
+        print(f"Problems length {problem_names_len}")
+        print(f"Lemma index {index} || Lemma found {lemma}\n")
+        print(f"Lemma found {lemma}\n")
         next_lemma_translations_index = None
         if index + 1 < problem_names_len:
             next_lemma = problem_names[index + 1]
+            print(f"Next lemma {next_lemma}\n")
             next_lemma_translations_index = find_lemma_index_in_translations(
                 next_lemma, translations
             )
+            print(f"next_lemma_translations_index{next_lemma_translations_index
+                                                  }\n")
         if next_lemma_translations_index is None:
             next_lemma_translations_index = len(translations)
 
