@@ -12,7 +12,8 @@ import time
 from timeit import Timer
 from typing import Any, List, Optional, TextIO
 from datetime import datetime
-from huggingface_hub import hf_hub_download
+
+# from huggingface_hub import hf_hub_download
 import pickle
 
 # from huggingface_hub import login
