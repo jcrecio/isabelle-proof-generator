@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 GENERATE = False
 VERIFY = True
 
-FILE_TO_RETRIEVE_GENERATED_PROOFS = "afp_generated/generated_proofs-Remath-v0.5-1.jsonl"
+FILE_TO_RETRIEVE_GENERATED_PROOFS = "afp_generated/generated_proofs-Remath-v0.5.jsonl"
 generated_proofs = {}
 
 
@@ -88,7 +88,7 @@ load_dotenv()
 
 VERBOSE = True
 LOG_TIME = False
-ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
+ISABELLE_PATH = "/home/jcrecio/repos/isabelle_proof_generator/isabelle_server/Isabelle2024/bin/isabelle"
 # ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
 ISABELLE_COMMAND = f"{ISABELLE_PATH} build -D"
 # ISABELLE_COMMAND = "isabelle build -D"
@@ -316,8 +316,7 @@ def get_lemmas_proofs_for_file(extraction_file_path: str):
             next_lemma_translations_index = find_lemma_index_in_translations(
                 next_lemma, translations
             )
-            print(f"next_lemma_translations_index{next_lemma_translations_index
-                                                  }\n")
+            print(f"next_lemma_translations_index{next_lemma_translations_index}\n")
         if next_lemma_translations_index is None:
             next_lemma_translations_index = len(translations)
 
@@ -728,6 +727,6 @@ if RAG:
 
 # MODEL, TOKENIZER = load_model()
 verify_all_sessions(
-    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp_extractions/afp_extractions",
-    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions",
+    "/home/jcrecio/repos/isabelle-proof-generator/afp_extractions/afp_extractions",
+    "/home/jcrecio/repos/isabelle-proof-generator/afp-current-extractions",
 )
