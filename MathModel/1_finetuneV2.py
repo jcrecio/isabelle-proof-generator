@@ -46,7 +46,7 @@ train_prompt_style = {
     "messages": [
         {
             "role": "system",
-            "content": "You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL. When you answer, please do it reasoning step by step.",
+            "content": "You are now an specialized agent to infer proofs for problems, theorem statements or lemmas written in Isabelle/HOL.",
         },
         {
             "role": "user",

@@ -9,41 +9,23 @@ import signal
 import subprocess
 import sys
 import time
-import uuid
 from timeit import Timer
 from typing import Any, List, Optional, TextIO
-from pathlib import Path
 from datetime import datetime
-import sys
-import datasets
-import pandas as pd
-from typing import Optional, List, Tuple
-from datasets import Dataset, load_dataset
-from tqdm.std import tqdm as tqdm_std
-from transformers import AutoTokenizer
-from transformers import pipeline
 from huggingface_hub import hf_hub_download
-from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
-from peft import PeftModel
-import torch
 import pickle
 from huggingface_hub import login
 from dotenv import load_dotenv
-from unsloth import FastLanguageModel
-import numpy as np
-import pacmap
-from langchain.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
-GENERATE = True
-VERIFY = False
+GENERATE = False
+VERIFY = True
 
 FILE_TO_RETRIEVE_GENERATED_PROOFS = "afp_generated/generated_proofs-Remath-v0.5-1.jsonl"
 generated_proofs = {}
 
 
 def load_generated_proofs():
-    matches = []
+    matches = {}
     with open(FILE_TO_RETRIEVE_GENERATED_PROOFS, "r") as f:
         for line in f:
             record = json.loads(line.strip())
@@ -95,14 +77,14 @@ EMBEDDING_MODEL_NAME = "thenlper/gte-large"
 
 
 model_to_load = sys.argv[1]
-log_name = f"logfile-{os.path.basename(model_to_load)}.html"
+html_logfile_name = f"logfile-{os.path.basename(model_to_load)}.html"
 RAG = True if len(sys.argv) > 3 and sys.argv[2] == "RAG" else False
 
 load_dotenv()
-hf_token = os.getenv("HF_TOKEN")
-login(hf_token)
+# hf_token = os.getenv("HF_TOKEN")
+# login(hf_token)
 
-VERBOSE = False
+VERBOSE = True
 LOG_TIME = False
 ISABELLE_PATH = "/home/jcrecio/repos/isabelle_server/Isabelle2024/bin/isabelle"
 # ISABELLE_PATH = "/home/jcrecio/repos/Isabelle2024/bin/isabelle"
@@ -121,6 +103,17 @@ def log(
     flush: bool = False,
     with_time: bool = True,
 ) -> None:
+    return
+
+
+def log2(
+    *values: Any,
+    sep: str = " ",
+    end: str = "\n",
+    file: Optional[TextIO] = None,
+    flush: bool = False,
+    with_time: bool = True,
+) -> None:
 
     if not VERBOSE:
         return
@@ -132,7 +125,7 @@ def log(
     else:
         formatted_message = message
 
-    output_file = file if file is not None else sys.stdout
+    output_file = sys.stdout  # file if file is not None else sys.stdout
 
     print(formatted_message, end=end, file=output_file, flush=flush)
 
@@ -453,14 +446,10 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
         if accumulated_per_page == per_page:
             accumulated_per_page = 0
             page += 1
-        # with open(log_name, "a") as log_file:
-        with open(
-            log_name,
-            "a",
-        ) as f:
-            log_file = sys.stdout
+        with open(html_logfile_name, "a") as html_logfile:
+
             if accumulated_per_page == 0:
-                log(BEGIN_TEMPLATE, file=log_file)
+                log(BEGIN_TEMPLATE, file=html_logfile)
 
             session_name = session.split("/")[-1]
             theory_files = get_files_in_folder(session)
@@ -475,24 +464,24 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                 if not os.path.exists(original_theory_file):
                     log(
                         f"Original theory not found: {original_theory_file}<br>",
-                        file=log_file,
+                        file=html_logfile,
                     )
                 else:
-                    log(f"Processing theory: {theory_file}<br>", file=log_file)
-                    log("<br>", file=log_file)
+                    log(f"Processing theory: {theory_file}<br>", file=html_logfile)
+                    log("<br>", file=html_logfile)
 
                     lemmas_and_proofs = get_lemmas_proofs_for_file(theory_file)
                     for lemma_index, (lemma, ground_proof) in enumerate(
                         lemmas_and_proofs
                     ):
-                        log("<hr><hr><hr><hr>", file=log_file)
-                        log(f"<h2>{lemma}</h2><br>", file=log_file)
+                        log("<hr><hr><hr><hr>", file=html_logfile)
+                        log(f"<h2>{lemma}</h2><br>", file=html_logfile)
 
                         original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}.thy"
                         backup_original_theory_file = f"{afp_extractions_original}/thys/{session_name}/{theory_name}_backup.thy"
 
                         try:
-                            print("reading theory content")
+                            log("reading theory content")
                             theory_content = read_file(original_theory_file)
                             generated_proof = None
 
@@ -500,26 +489,28 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                 generated_proof = generate_proof(
                                     MODEL, TOKENIZER, lemma
                                 )
-                                print(f"generating proof ({lemma_index})")
-                                print(generated_proof)
-                                f.write(
-                                    json.dumps(
-                                        {"lemma": lemma, "proof": generated_proof}
-                                    )
-                                    + "\n"
-                                )
+                                log(f"generating proof ({lemma_index})")
+                                log(generated_proof)
+                                # f.write(
+                                #     json.dumps(
+                                #         {"lemma": lemma, "proof": generated_proof}
+                                #     )
+                                #     + "\n"
+                                # )
                             else:
                                 generated_proof = retrieve_generated_proof_by_lemma(
                                     lemma
                                 )
+                                if generated_proof is None:
+                                    continue
 
                             log(
                                 f"<b>Ground proof:</b> <br><pre><code>{ground_proof}</code></pre>",
-                                file=log_file,
+                                file=html_logfile,
                             )
                             log(
                                 f"<b>Generated proof:</b><pre><code>{generated_proof}</code></pre><br><br>",
-                                file=log_file,
+                                file=html_logfile,
                             )
 
                             if VERIFY:
@@ -553,7 +544,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                             <div style="font-style: italic;">{result[1]}</div>
                                         </div><br>
                                         """,
-                                        file=log_file,
+                                        file=html_logfile,
                                     )
                                 elif result[0] == "error":
                                     failures += 1
@@ -565,7 +556,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                             <div style="font-style: italic;">{result[1]}</div>
                                         </div><br>
                                         """,
-                                        file=log_file,
+                                        file=html_logfile,
                                     )
                                 elif result[0] == "success":
                                     successes += 1
@@ -575,7 +566,7 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                             <span style="color: green; font-stye: bold">Successful Isabelle/HOL proof.</span>
                                         </div><br>
                                         """,
-                                        file=log_file,
+                                        file=html_logfile,
                                     )
                                     # Clean isabelle theory files after verification
                                 os.remove(original_theory_file)
@@ -583,17 +574,17 @@ def verify_all_sessions(afp_extractions_folder, afp_extractions_original):
                                     backup_original_theory_file, original_theory_file
                                 )
 
-                                log(
+                                log2(
                                     f"""
-                                    Successes: {successes} <-|-> Failures: {failures}<br>
+                                    ------------------->Successes: {successes} <-|-> Failures: {failures}
                                     """,
-                                    file=log_file,
+                                    file=html_logfile,
                                 )
                         except Exception as e:
                             print(e)
-                            log(
+                            log2(
                                 f"""
-                                <span style="color: red"> Unexpected error: {e}</span?<br>
+                                 Unexpected error: {e}
                                 """
                             )
 
@@ -727,8 +718,8 @@ def generate_proof(model, tokenizer, theorem):
 if RAG:
     KNOWLEDGE_VECTOR_DATABASE = load_rag()
 
-MODEL, TOKENIZER = load_model()
+# MODEL, TOKENIZER = load_model()
 verify_all_sessions(
-    "/home/jcrecio/repos/isabelle-proof-generator/afp_extractions/afp_extractions",
-    "/home/jcrecio/repos/isabelle-proof-generator/afp-current-extractions",
+    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp_extractions/afp_extractions",
+    "/home/jcrecio/repos/isabelle_server/isabelle-proof-generator/afp-current-extractions",
 )
