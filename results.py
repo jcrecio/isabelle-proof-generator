@@ -10,9 +10,9 @@ x = np.arange(len(models))
 width = 0.25  # Width of the bars
 
 # Sample data (replace with actual percentages)
-base_scores = [60, 65, 62]  # Base model scores
-finetuned_scores = [75, 80, 78]  # Finetuned model scores
-rag_scores = [85, 88, 86]  # RAG model scores
+base_scores = [1, 11, 14]  # Base model scores
+finetuned_scores = [2, 19, 23]  # Finetuned model scores
+rag_scores = [1, 23, 27]  # RAG model scores
 
 # Create the figure and axis
 fig, ax = plt.subplots(figsize=(12, 6))
